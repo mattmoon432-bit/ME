@@ -1,0 +1,68 @@
+{
+  "name": "Hollowmere",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$properties": {
+        "CharacterWalkSpeed": 11,
+        "CharacterUseJumpPower": false,
+        "CharacterJumpHeight": 4.5,
+        "CameraMaxZoomDistance": 0.5,
+        "CameraMinZoomDistance": 0.5
+      },
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "src/client"
+        }
+      }
+    },
+    "Players": {
+      "$properties": {
+        "CharacterAutoLoads": false
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "Future",
+        "Ambient": [
+          0.02,
+          0.02,
+          0.03
+        ],
+        "OutdoorAmbient": [
+          0.06,
+          0.07,
+          0.1
+        ],
+        "Brightness": 0.4,
+        "ClockTime": 0.5,
+        "GlobalShadows": true,
+        "EnvironmentDiffuseScale": 0.15,
+        "EnvironmentSpecularScale": 0.4,
+        "ExposureCompensation": 0
+      }
+    },
+    "SoundService": {
+      "$properties": {
+        "AmbientReverb": "StoneCorridor",
+        "RespectFilteringEnabled": true
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false,
+        "Gravity": 196.2
+      }
+    }
+  }
+}
