@@ -6,7 +6,6 @@
 	  * Each step of her gait is a very loud stomp that shakes the camera when near.
 ]]
 
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
@@ -43,29 +42,19 @@ local function attach(model: Model)
 	GirlVisuals.Animator = animator
 	local unbindAnimator = animator:Bind()
 
-	-- Local freeze: if I can see her, she doesn't move on my screen.
-	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude
+	-- Local freeze: same rule as the server (she's in the front half of my view),
+	-- applied on this frame so she never visibly moves while I'm facing her.
 	local connection = RunService.RenderStepped:Connect(function()
 		local camera = Workspace.CurrentCamera
-		local head = model:FindFirstChild("Head") :: BasePart?
-		if not camera or not head or model:GetAttribute("Hidden") or Workspace:GetAttribute("Blink") then
+		local root = model:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if not camera or not root or model:GetAttribute("Hidden") then
 			animator:SetFrozen(false)
 			return
 		end
-		local eye = camera.CFrame.Position
-		local dir = head.Position - eye
-		local seen = false
-		if dir.Magnitude < Config.Girl.SightRange and camera.CFrame.LookVector:Dot(dir.Unit) >= Config.Girl.ViewDot then
-			local exclude: { Instance } = { model, camera }
-			local character = Players.LocalPlayer.Character
-			if character then
-				table.insert(exclude, character)
-			end
-			params.FilterDescendantsInstances = exclude
-			local result = Workspace:Raycast(eye, dir, params)
-			seen = result == nil
-		end
+		local look = camera.CFrame.LookVector * Vector3.new(1, 0, 1)
+		local dir = (root.Position - camera.CFrame.Position) * Vector3.new(1, 0, 1)
+		local seen = dir.Magnitude < 3
+			or (dir.Magnitude < Config.Girl.SightRange and look.Magnitude > 0.05 and look.Unit:Dot(dir.Unit) >= Config.Girl.ViewDot)
 		animator:SetFrozen(seen)
 	end)
 	GirlVisuals.Unbind = function()

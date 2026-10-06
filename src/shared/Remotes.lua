@@ -15,9 +15,9 @@ local EVENTS = {
 
 	-- server -> client
 	"ObjectiveUpdate", -- (stageIndex, text, isNew)
-	"ShowMessage", -- (text, duration, style)  shown as a subtitle; freezes the player while visible
+	"ShowMessage", -- (text, duration, style)  shown as a subtitle
 	"ShowNote", -- (title, body)
-	"ScareEvent", -- (name, data) Blackout, Blink, Stinger, Unlock...
+	"ScareEvent", -- (name, data) Blackout, Stinger, DoorSmash...
 	"TurnScare", -- you picked up the flashlight; she's waiting for you to turn around
 	"FinalScare", -- (doorCFrame) the exit is a brick wall... turn around
 	"Jumpscare", -- (girlCFrame) she caught you

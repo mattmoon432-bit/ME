@@ -35,8 +35,6 @@ local function onScare(name: string, data)
 		Audio.Play("Ambient", "PowerDown")
 		CameraFX.AddTrauma(0.3)
 		PostFX.Flash(Color3.new(0, 0, 0), 0.8, 1)
-	elseif name == "Blink" then
-		Audio.Play("Ambient", "Whisper", nil, { Volume = 0.6 })
 	elseif name == "Stinger" then
 		Audio.Play("Music", "Stinger", nil, { Volume = 0.7 })
 		CameraFX.AddTrauma(0.3)

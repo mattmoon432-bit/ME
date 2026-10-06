@@ -2,8 +2,8 @@
 
 A cinematic Roblox horror game about **the Girl in White**, a too-tall figure in a
 filthy nightgown with black hair hanging over her face. She follows Weeping Angel
-rules: **while anyone is looking at her she cannot move**. Look away, or let the lights
-blink, and you hear her stomping toward you.
+rules: **while she's anywhere in front of you she cannot move**. Turn your back on her
+and you hear her stomping toward you.
 
 Everything is generated in code: the map, the props, her rig, all the animations and
 the UI. The project has no uploaded meshes, images or animations.
@@ -53,8 +53,8 @@ Mobile and gamepad buttons are created through `ContextActionService`.
 If she catches you, you get a jumpscare and RESTART puts you back in the corridor
 outside the office. Keys you already found stay found.
 
-Any story text on screen (subtitles, chapter cards, notes) **freezes your character
-and camera** until it disappears. Subtitles are always white.
+Subtitles are always white and never block movement. Reading a note pauses you
+until you close it.
 
 ## Project structure
 
@@ -100,17 +100,15 @@ src/client/  (StarterPlayerScripts.Client)
 
 ## The Girl's AI (`src/server/GirlAI.lua`)
 
-- **Watched means frozen.** Every 0.05 s the server checks every player's camera
-  direction (reported by the client) plus line of sight to her head, chest and feet.
-  If anyone can see her, her body is anchored and her animation stops mid-pose. The
-  local client also freezes her on the same frame it sees her, so you never catch
-  her moving.
+- **In front of you means frozen.** If she is anywhere in the front half of any
+  player's view (walls don't matter), her body is anchored and her animation stops
+  mid-pose. She only moves once she is behind you. The server re-checks the moment a
+  camera update arrives, and your client freezes her on the same frame, so you never
+  catch her moving.
 - **Unwatched means she moves.** She pathfinds to the nearest player at
   `Config.Girl.Speed` (17; you walk at 11 and sprint at 18) with a stop-motion
   lurching run. Every step is a very loud stomp that shakes your camera when she's
   close. Closed doors burst open.
-- **Blinks.** If you stare at her long enough, the lights (and your flashlight) cut
-  out for 0.7 s. Nobody can see in the dark, so she lurches closer.
 - **Spawning.** She always appears out of sight, at least 45 studs from everyone.
 - **Catch.** Within 3.6 studs you get her leap jumpscare and die. She vanishes and
   returns a few seconds later.
@@ -168,8 +166,7 @@ polished release, put real horror audio in the `id` field of each entry in
 Everything that affects pacing lives in `src/shared/Config.lua`:
 
 - `Config.Girl.Speed / CatchDistance`: how fast she closes in when unwatched
-- `Config.Girl.ViewDot / SightRange`: how directly you must look at her to hold her still
-- `Config.Girl.BlinkMinInterval / BlinkMaxInterval / BlinkDuration`: the light blinks
+- `Config.Girl.ViewDot / SightRange`: how far behind you she must be before she can move
 - `Config.Girl.ActivateDelay / MinSpawnDistance / RespawnDelay`
 - `Config.Timing.*`: intro blackout delay, turn-around timeouts
 - `Config.Lighting.*`: ambient level and post-blackout light level (raise these if it's too dark)
@@ -187,4 +184,4 @@ windows, openings) and patrol cells, and the builder handles walls, lights and d
 - The built-in fallback sounds are a stand-in. Real assets in `Sounds.lua` are the
   single biggest upgrade.
 - Multiplayer works as co-op (shared objectives; she hunts the nearest player and is
-  held still if *anyone* is watching her), but the pacing is designed for 1–4 players.
+  held still if she's in front of *anyone*), but the pacing is designed for 1–4 players.

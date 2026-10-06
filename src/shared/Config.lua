@@ -27,14 +27,15 @@ Config.Player = {
 Config.Girl = {
 	Speed = 17, -- studs/s while unobserved (player walk 11 / sprint 18)
 	CatchDistance = 3.6,
-	SightRange = 120, -- a player farther than this can't "hold" her with their gaze
-	ViewDot = 0.6, -- how centred on screen she must be to count as watched (cos of angle)
+	SightRange = 250, -- a player farther than this can't "hold" her with their gaze
+	-- She is frozen whenever she is anywhere in the front half of your view (even
+	-- behind a wall). She only moves once she is BEHIND you. Value is the cosine of the
+	-- angle between where you look and where she is: 0 = exactly 90 degrees to the
+	-- side; -0.15 adds a small safety margin (~99 degrees).
+	ViewDot = -0.15,
 	ActivateDelay = 14, -- seconds after the flashlight scare before she starts hunting
 	MinSpawnDistance = 45,
 	RespawnDelay = 6, -- after she catches someone
-	BlinkMinInterval = 9, -- the lights "blink" and she lurches closer in the dark
-	BlinkMaxInterval = 16,
-	BlinkDuration = 0.7,
 }
 
 Config.Timing = {

@@ -18,6 +18,7 @@ local Objectives = require(script.Parent.Objectives)
 local PlayerService = {}
 PlayerService.Look = {} :: { [Player]: Vector3 }
 PlayerService.Playing = {} :: { [Player]: boolean }
+PlayerService.LookChanged = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Util).Signal.new() -- (player)
 PlayerService.Spawned = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Util).Signal.new() -- (player)
 
 local settingsStore = nil
@@ -221,6 +222,7 @@ function PlayerService.Init(map)
 	Remotes.Event("CameraLook").OnServerEvent:Connect(function(player, look)
 		if typeof(look) == "Vector3" and look.Magnitude > 0.5 and look.Magnitude < 1.5 then
 			PlayerService.Look[player] = look.Unit
+			PlayerService.LookChanged:Fire(player)
 		end
 	end)
 

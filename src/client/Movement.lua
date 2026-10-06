@@ -245,10 +245,8 @@ function Movement.Init()
 			flashCF = CFrame.new(target.Position) * (flashCF - flashCF.Position)
 			flashPart.CFrame = flashCF
 			local brightness = on and P.FlashlightBrightness or 0
-			-- dies completely during a blink; stutters when she is close
-			if Workspace:GetAttribute("Blink") then
-				brightness = 0
-			elseif on and girl and not girl:GetAttribute("Hidden") then
+			-- stutters when she is close
+			if on and girl and not girl:GetAttribute("Hidden") then
 				local head = girl:FindFirstChild("Head") :: BasePart?
 				if head and (head.Position - camera.CFrame.Position).Magnitude < 22 then
 					brightness *= math.noise(os.clock() * 25, 3) > 0.15 and 1 or 0.1
@@ -266,10 +264,10 @@ function Movement.Init()
 
 		-- Report where we're looking (she can only move while nobody is looking).
 		lookTimer += dt
-		if Movement.Active and camera and lookTimer > 0.08 then
+		if Movement.Active and camera and lookTimer > 0.05 then
 			lookTimer = 0
 			local look = camera.CFrame.LookVector
-			if look:Dot(lastLook) < 0.999 then
+			if look:Dot(lastLook) < 0.9995 then
 				lastLook = look
 				Remotes.Event("CameraLook"):FireServer(look)
 			end

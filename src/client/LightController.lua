@@ -5,8 +5,8 @@
 	  Broken    mostly dead, sparks to life in short bursts
 	  Dead      never on
 	  Emergency red battery lamps - on while the power is out / during the alarm
-	World state: Workspace attributes Power (full), LowPower (dim backup after the
-	blackout), Blink (everything off for a split second - when she moves).
+	World state: Workspace attributes Power (full) and LowPower (dim backup after the
+	blackout).
 	Lights near the Girl stutter and die.
 ]]
 
@@ -125,7 +125,6 @@ function LightController.Init()
 		local camPos = camera.CFrame.Position
 		local power = Workspace:GetAttribute("Power") == true
 		local lowPower = Workspace:GetAttribute("LowPower") == true
-		local blackout = Workspace:GetAttribute("Blink") == true
 		local alarm = false
 		local monster = Workspace:FindFirstChild("Girl")
 		local monsterHead = monster and not monster:GetAttribute("Hidden") and monster:FindFirstChild("Head") :: BasePart?
@@ -172,9 +171,6 @@ function LightController.Init()
 				-- backup power after the blackout: everything runs dim
 				if lowPower and not power and not record.NoPower and mode ~= "Emergency" then
 					level *= Config.Lighting.LowPowerLevel
-				end
-				if blackout then
-					level = 0
 				end
 				-- The monster drains the lights around it.
 				if monsterPos and mode ~= "Emergency" and level > 0 then

@@ -1,13 +1,12 @@
 --[[
 	THE GIRL IN WHITE - server-side AI (Weeping Angel rules).
 
-	  * While ANY player is looking at her (camera direction + line of sight) she is
-	    frozen solid: her body is anchored and her animation stops mid-pose.
+	  * While she is anywhere in the front half of ANY player's view she is frozen
+	    solid: her body is anchored and her animation stops mid-pose. She only moves
+	    once she is behind you.
 	  * The instant nobody is looking, she lurches toward the nearest player at
 	    Config.Girl.Speed, stomping loudly (footsteps are produced client-side from her
 	    gait), bursting through closed doors.
-	  * Every so often the lights "blink" out for a split second. In that darkness
-	    nobody can see her, so she moves - even while you're staring at her.
 	  * If she reaches you: jumpscare, you die, she vanishes and returns later.
 
 	Animation intent is published as model attributes (AnimState, LookTarget, Moving,
@@ -22,7 +21,6 @@ local Workspace = game:GetService("Workspace")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
 local GirlRig = require(Shared.GirlRig)
-local Remotes = require(Shared.Remotes)
 local SoundLibrary = require(Shared.SoundLibrary)
 
 local Doors = require(script.Parent.Doors)
@@ -48,7 +46,6 @@ function GirlAI.new(map, deps: Deps)
 	self.Hidden = true
 	self.Busy = false
 	self.AppearAt = math.huge
-	self.NextBlink = os.clock() + 10
 	self.NextGiggle = os.clock() + 20
 	self.Frozen = true
 
@@ -149,42 +146,40 @@ function GirlAI:_validTarget(player: Player): boolean
 	return root ~= nil
 end
 
--- Is this player looking at her right now? Checks head, chest and feet so seeing any
--- part of her counts.
+-- Is this player facing her? Anywhere in the front half of their view counts (walls
+-- and props don't matter) - she only moves once she is behind them.
 function GirlAI:_watchedBy(player: Player): boolean
 	local character, root, head = self:_characterOf(player)
 	if not character or not root or not head then
 		return false
 	end
 	local look = self.Deps.GetLook(player) or root.CFrame.LookVector
-	local eye = head.Position
-	local rootPos = self.Root.Position
-	for _, point in { self.Head.Position, rootPos + Vector3.new(0, 0.8, 0), rootPos - Vector3.new(0, 2.6, 0) } do
-		local dir = point - eye
-		local distance = dir.Magnitude
-		if distance < 2 then
-			return true
-		end
-		if distance <= CFG.SightRange and look:Dot(dir.Unit) >= CFG.ViewDot then
-			local result = Workspace:Raycast(eye, dir, self.RayParams)
-			if result == nil or result.Instance:IsDescendantOf(character) then
-				return true
-			end
-		end
+	local flatLook = look * FLAT
+	local dir = (self.Root.Position - head.Position) * FLAT
+	if dir.Magnitude < 3 then
+		return true
 	end
-	return false
+	if dir.Magnitude > CFG.SightRange or flatLook.Magnitude < 0.05 then
+		return false
+	end
+	return flatLook.Unit:Dot(dir.Unit) >= CFG.ViewDot
 end
 
 function GirlAI:_isWatched(): boolean
-	if Workspace:GetAttribute("Blink") then
-		return false
-	end
 	for _, player in Players:GetPlayers() do
 		if self:_validTarget(player) and self:_watchedBy(player) then
 			return true
 		end
 	end
 	return false
+end
+
+-- Called the moment a player's camera direction arrives: freeze on the spot instead of
+-- waiting for the next tick, so turning to face her stops her immediately.
+function GirlAI:OnLook()
+	if self.Active and not self.Hidden and not self.Busy and not self.Frozen and self:_isWatched() then
+		self:_freeze()
+	end
 end
 
 -- Could any player see this floor position?
@@ -330,16 +325,6 @@ function GirlAI:Reset(active: boolean, delay: number?)
 	self:_hide()
 	self.Frozen = true
 	self.AppearAt = os.clock() + (delay or CFG.ActivateDelay)
-	self.NextBlink = os.clock() + CFG.BlinkMaxInterval
-end
-
-function GirlAI:_blink()
-	self.NextBlink = os.clock() + CFG.BlinkMinInterval + math.random() * (CFG.BlinkMaxInterval - CFG.BlinkMinInterval)
-	Workspace:SetAttribute("Blink", true)
-	Remotes.Event("ScareEvent"):FireAllClients("Blink")
-	task.delay(CFG.BlinkDuration, function()
-		Workspace:SetAttribute("Blink", false)
-	end)
 end
 
 function GirlAI:_tick()
@@ -373,10 +358,6 @@ function GirlAI:_tick()
 
 	if self:_isWatched() then
 		self:_freeze()
-		-- Being stared at for a while makes the lights fail.
-		if os.clock() >= self.NextBlink and best < 70 then
-			self:_blink()
-		end
 		return
 	end
 

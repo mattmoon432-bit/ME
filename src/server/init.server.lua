@@ -64,13 +64,16 @@ Decorator.Decorate(map)
 Objectives.Init()
 PlayerService.Init(map)
 Interactions.Init(map)
-Workspace:SetAttribute("Blink", false)
 
 local girl = GirlAI.new(map, {
 	Kill = PlayerService.Kill,
 	GetLook = PlayerService.GetLook,
 	IsPlaying = PlayerService.IsPlaying,
 })
+
+PlayerService.LookChanged:Connect(function()
+	girl:OnLook()
+end)
 
 ---------------------------------------------------------------------------------------------
 -- Story beats
@@ -116,7 +119,6 @@ end)
 
 Objectives.Reset:Connect(function()
 	girl:Reset(false)
-	Workspace:SetAttribute("Blink", false)
 end)
 
 -- Nobody playing? Put her back to sleep until someone returns.

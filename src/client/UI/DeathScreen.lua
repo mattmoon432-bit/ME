@@ -20,7 +20,7 @@ local C = Theme.Colors
 local TIPS = {
 	"She only moves when nobody is looking at her.",
 	"Back away slowly. Keep your eyes on her.",
-	"When the lights blink, she moves.",
+	"She only moves once she is behind you.",
 	"Listen for the stomping. If you hear it, she's coming.",
 	"Don't turn your back on her.",
 	"The storage key is somewhere in Ward C.",

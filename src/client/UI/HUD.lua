@@ -13,7 +13,6 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local SoundLibrary = require(Shared.SoundLibrary)
 local Util = require(Shared.Util)
 
-local Lock = require(script.Parent.Parent.Lock)
 local Movement = require(script.Parent.Parent.Movement)
 local Theme = require(script.Parent.Theme)
 
@@ -181,8 +180,7 @@ function HUD.SetObjective(stage: number, text: string, isNew: boolean)
 	end)
 end
 
--- Subtitles are always pure white (readable in the dark) and freeze the player -
--- movement and camera - for as long as they're on screen.
+-- Subtitles are always pure white (readable in the dark). They never block movement.
 -- style: nil | "Thought" (italic)
 function HUD.Message(text: string, duration: number?, style: string?)
 	messageToken += 1
@@ -193,15 +191,10 @@ function HUD.Message(text: string, duration: number?, style: string?)
 	subtitle.Text = style == "Thought" and ("<i>" .. text .. "</i>") or text
 	subtitle.RichText = style == "Thought"
 	subtitle.TextTransparency = 1
-	Lock.Push("Subtitle")
 	Util.tween(subtitle, 0.3, { TextTransparency = 0 })
 	task.delay(time, function()
 		if token == messageToken then
 			Util.tween(subtitle, 0.5, { TextTransparency = 1 })
-			task.wait(0.5)
-			if token == messageToken then
-				Lock.Pop("Subtitle")
-			end
 		end
 	end)
 end
@@ -217,11 +210,9 @@ end
 function HUD.ClearMessages()
 	messageToken += 1
 	subtitle.TextTransparency = 1
-	Lock.Pop("Subtitle")
 end
 
 function HUD.Chapter(title: string, sub: string)
-	Lock.Push("Chapter")
 	chapter.Text = title
 	chapterSub.Text = sub
 	chapter.TextTransparency = 1
@@ -231,8 +222,6 @@ function HUD.Chapter(title: string, sub: string)
 	task.delay(4.5, function()
 		Util.tween(chapter, 1.5, { TextTransparency = 1 })
 		Util.tween(chapterSub, 1.5, { TextTransparency = 1 })
-		task.wait(1.5)
-		Lock.Pop("Chapter")
 	end)
 end
 
