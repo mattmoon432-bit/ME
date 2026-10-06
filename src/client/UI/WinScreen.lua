@@ -1,4 +1,4 @@
--- Escape ending: the gate slams behind you, the pounding fades, an epilogue types out.
+-- The ending: there was never a way out. "THE END" and an epilogue types out.
 
 local Players = game:GetService("Players")
 
@@ -13,10 +13,10 @@ WinScreen.OnPlayAgain = nil :: (() -> ())?
 WinScreen.OnMenu = nil :: (() -> ())?
 
 local C = Theme.Colors
-local EPILOGUE = "You followed the outflow until the facility lights were gone behind the trees.\n\n"
-	.. "Blackwater recovered no bodies from Hollowmere.\n"
-	.. "They did recover the security footage.\n\n"
-	.. "In the last frame, Subject 09 is standing at the tunnel gate.\nIt is still smiling."
+local EPILOGUE = "The night shift log for Hollowmere ends at 02:13 AM.\n\n"
+	.. "Nobody answered the morning call. The doors were found chained, the exit bricked up\n"
+	.. "from the inside, years before you ever took the job.\n\n"
+	.. "There is a new drawing on the corridor wall.\nTwo figures now. Holding hands."
 
 local gui: ScreenGui
 local bg: Frame
@@ -34,7 +34,7 @@ function WinScreen.Init()
 	bg.BorderSizePixel = 0
 	bg.Size = UDim2.fromScale(1, 1)
 	bg.Parent = gui
-	title = Theme.Label(gui, "YOU ESCAPED", Theme.Fonts.Title, 110, C.Text, {
+	title = Theme.Label(gui, "THE END", Theme.Fonts.Title, 120, C.BloodBright, {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.2),
 		Size = UDim2.new(1, 0, 0, 120),
@@ -92,7 +92,7 @@ function WinScreen.Show(elapsed: number)
 	Util.tween(bg, 2.5, { BackgroundTransparency = 0 })
 	title.TextTransparency = 1
 	timeLabel.TextTransparency = 1
-	timeLabel.Text = "TIME  " .. Util.formatTime(elapsed)
+	timeLabel.Text = "She was always behind you.      " .. Util.formatTime(elapsed)
 	story.Text = ""
 	buttons.Visible = false
 	task.delay(2.5, function()

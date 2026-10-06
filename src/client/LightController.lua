@@ -5,9 +5,9 @@
 	  Broken    mostly dead, sparks to life in short bursts
 	  Dead      never on
 	  Emergency red battery lamps - on while the power is out / during the alarm
-	World state: Workspace attributes Power, Blackout, Alarm.
-	Lights near the monster stutter and die - you often see the lights fail before
-	you see it.
+	World state: Workspace attributes Power (full), LowPower (dim backup after the
+	blackout), Blink (everything off for a split second - when she moves).
+	Lights near the Girl stutter and die.
 ]]
 
 local CollectionService = game:GetService("CollectionService")
@@ -15,6 +15,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Config = require(Shared.Config)
 local SoundLibrary = require(Shared.SoundLibrary)
 
 local Settings = require(script.Parent.Settings)
@@ -123,9 +124,10 @@ function LightController.Init()
 		local t = os.clock()
 		local camPos = camera.CFrame.Position
 		local power = Workspace:GetAttribute("Power") == true
-		local blackout = Workspace:GetAttribute("Blackout") == true
-		local alarm = Workspace:GetAttribute("Alarm") == true
-		local monster = Workspace:FindFirstChild("Grinner")
+		local lowPower = Workspace:GetAttribute("LowPower") == true
+		local blackout = Workspace:GetAttribute("Blink") == true
+		local alarm = false
+		local monster = Workspace:FindFirstChild("Girl")
 		local monsterHead = monster and not monster:GetAttribute("Hidden") and monster:FindFirstChild("Head") :: BasePart?
 		local monsterPos = monsterHead and monsterHead.Position or nil
 		local alarmPulse = (math.sin(t * 5) + 1) / 2
@@ -147,7 +149,7 @@ function LightController.Init()
 				end
 			end
 
-			local powered = power or record.NoPower
+			local powered = power or lowPower or record.NoPower
 			local level = 0
 			local mode = record.Mode
 			if mode == "Normal" then
@@ -159,7 +161,7 @@ function LightController.Init()
 			elseif mode == "Emergency" then
 				if alarm then
 					level = alarmPulse
-				elseif blackout or not power then
+				elseif not power then
 					level = 0.75 + math.noise(t * 3, record.Seed) * 0.15
 				else
 					level = 0.12
@@ -167,7 +169,11 @@ function LightController.Init()
 			end
 
 			if not record.Menu then
-				if blackout and mode ~= "Emergency" then
+				-- backup power after the blackout: everything runs dim
+				if lowPower and not power and not record.NoPower and mode ~= "Emergency" then
+					level *= Config.Lighting.LowPowerLevel
+				end
+				if blackout then
 					level = 0
 				end
 				-- The monster drains the lights around it.

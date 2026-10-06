@@ -19,7 +19,7 @@ local Settings = require(script.Parent.Settings)
 local CameraFX = {}
 
 local trauma = 0
-local sustained = 0 -- continuous shake level (0..1) set by ChaseFX
+local sustained = 0 -- continuous shake level (0..1) set by TensionFX
 local fovOffsets: { [string]: number } = {}
 local fovPunch = 0
 local currentFov = Config.Camera.BaseFOV

@@ -1,7 +1,6 @@
 --[[
 	Minimal in-game HUD:
 	  * objective (top-left) with an animated "NEW OBJECTIVE" reveal + typewriter
-	  * "RUN." takeover for the final chase
 	  * subtitles / thoughts / phone & radio lines (bottom centre)
 	  * stamina bar (only visible when not full; red when exhausted)
 	  * centre dot, chapter cards, control hints
@@ -14,6 +13,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local SoundLibrary = require(Shared.SoundLibrary)
 local Util = require(Shared.Util)
 
+local Lock = require(script.Parent.Parent.Lock)
 local Movement = require(script.Parent.Parent.Movement)
 local Theme = require(script.Parent.Theme)
 
@@ -29,7 +29,6 @@ local subtitle: TextLabel
 local staminaHolder: Frame
 local staminaFill: Frame
 local dot: Frame
-local runText: TextLabel
 local chapter: TextLabel
 local chapterSub: TextLabel
 local hints: TextLabel
@@ -73,7 +72,8 @@ function HUD.Init()
 		TextTransparency = 1,
 	})
 	local subStroke = Instance.new("UIStroke")
-	subStroke.Transparency = 0.3
+	subStroke.Thickness = 1.5
+	subStroke.Transparency = 0.1
 	subStroke.Parent = subtitle
 
 	staminaHolder = Instance.new("Frame")
@@ -105,20 +105,13 @@ function HUD.Init()
 	corner.Parent = dot
 	dot.Parent = gui
 
-	runText = Theme.Label(gui, "RUN.", Theme.Fonts.Title, 150, C.BloodBright, {
-		AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.fromScale(0.5, 0.42),
-		Size = UDim2.new(1, 0, 0, 160),
-		TextTransparency = 1,
-	})
-
-	chapter = Theme.Label(gui, "", Theme.Fonts.Heading, 40, C.Text, {
+	chapter = Theme.Label(gui, "", Theme.Fonts.Heading, 40, Color3.new(1, 1, 1), {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.fromScale(0.5, 0.45),
 		Size = UDim2.new(1, 0, 0, 50),
 		TextTransparency = 1,
 	})
-	chapterSub = Theme.Label(gui, "", Theme.Fonts.Mono, 18, C.TextDim, {
+	chapterSub = Theme.Label(gui, "", Theme.Fonts.Mono, 18, Color3.new(1, 1, 1), {
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		Position = UDim2.new(0.5, 0, 0.45, 44),
 		Size = UDim2.new(1, 0, 0, 24),
@@ -142,10 +135,6 @@ function HUD.Init()
 		local target = visible and 0.25 or 1
 		staminaFill.BackgroundTransparency += (target - staminaFill.BackgroundTransparency) * 0.12
 		staminaHolder.BackgroundTransparency = 0.4 + staminaFill.BackgroundTransparency * 0.6
-		if runText.TextTransparency < 1 then
-			runText.Rotation = math.noise(os.clock() * 12, 1) * 3
-			runText.Position = UDim2.new(0.5, math.noise(os.clock() * 20, 2) * 8, 0.42, math.noise(os.clock() * 20, 3) * 6)
-		end
 	end)
 end
 
@@ -169,17 +158,6 @@ local function typewrite(label: TextLabel, text: string, speed: number)
 end
 
 function HUD.SetObjective(stage: number, text: string, isNew: boolean)
-	if stage == 5 then
-		objectiveText.Text = text
-		-- RUN. takeover
-		runText.TextTransparency = 0
-		runText.TextSize = 220
-		Util.tween(runText, 0.4, { TextSize = 150 }, Enum.EasingStyle.Back)
-		task.delay(2.4, function()
-			Util.tween(runText, 1.2, { TextTransparency = 1 })
-		end)
-		return
-	end
 	if text == "" then
 		objectiveFrame.Visible = false
 		return
@@ -203,27 +181,47 @@ function HUD.SetObjective(stage: number, text: string, isNew: boolean)
 	end)
 end
 
--- style: nil | "Thought" | "Phone" | "Radio"
+-- Subtitles are always pure white (readable in the dark) and freeze the player -
+-- movement and camera - for as long as they're on screen.
+-- style: nil | "Thought" (italic)
 function HUD.Message(text: string, duration: number?, style: string?)
 	messageToken += 1
 	local token = messageToken
-	subtitle.Font = (style == "Phone" or style == "Radio") and Theme.Fonts.Mono or Theme.Fonts.Body
-	subtitle.TextColor3 = style == "Phone" and Color3.fromRGB(230, 90, 90)
-		or style == "Radio" and Color3.fromRGB(200, 180, 120)
-		or style == "Thought" and Color3.fromRGB(170, 170, 180)
-		or C.Text
+	local time = duration or 3
+	subtitle.Font = Theme.Fonts.Body
+	subtitle.TextColor3 = Color3.new(1, 1, 1)
 	subtitle.Text = style == "Thought" and ("<i>" .. text .. "</i>") or text
 	subtitle.RichText = style == "Thought"
 	subtitle.TextTransparency = 1
+	Lock.Push("Subtitle")
 	Util.tween(subtitle, 0.3, { TextTransparency = 0 })
-	task.delay(duration or 3, function()
+	task.delay(time, function()
 		if token == messageToken then
-			Util.tween(subtitle, 0.8, { TextTransparency = 1 })
+			Util.tween(subtitle, 0.5, { TextTransparency = 1 })
+			task.wait(0.5)
+			if token == messageToken then
+				Lock.Pop("Subtitle")
+			end
 		end
 	end)
 end
 
+-- Shows a sequence of subtitles back to back and yields until they're gone.
+function HUD.Sequence(lines: { { any } })
+	for _, line in lines do
+		HUD.Message(line[1], line[2], line[3])
+		task.wait((line[2] or 3) + 0.6)
+	end
+end
+
+function HUD.ClearMessages()
+	messageToken += 1
+	subtitle.TextTransparency = 1
+	Lock.Pop("Subtitle")
+end
+
 function HUD.Chapter(title: string, sub: string)
+	Lock.Push("Chapter")
 	chapter.Text = title
 	chapterSub.Text = sub
 	chapter.TextTransparency = 1
@@ -233,6 +231,8 @@ function HUD.Chapter(title: string, sub: string)
 	task.delay(4.5, function()
 		Util.tween(chapter, 1.5, { TextTransparency = 1 })
 		Util.tween(chapterSub, 1.5, { TextTransparency = 1 })
+		task.wait(1.5)
+		Lock.Pop("Chapter")
 	end)
 end
 

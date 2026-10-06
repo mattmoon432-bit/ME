@@ -5,88 +5,60 @@
 local Config = {}
 
 Config.GameTitle = "HOLLOWMERE"
-Config.Subtitle = "SUBJECT 09"
-Config.MonsterName = "The Grinner"
-Config.Version = "1.0.0"
+Config.Subtitle = "DON'T LOOK AWAY"
+Config.MonsterName = "The Girl in White"
+Config.Version = "2.0.0"
 
 Config.Player = {
 	WalkSpeed = 11,
 	SprintSpeed = 18,
 	CrouchSpeed = 6,
-	ChaseBoost = 3, -- added to every speed while being chased
 	StaminaMax = 100,
-	StaminaDrain = 20, -- per second while sprinting
-	StaminaDrainChase = 9, -- adrenaline: drains slower during a chase
+	StaminaDrain = 16, -- per second while sprinting
 	StaminaRegen = 15,
 	StaminaRegenDelay = 1.1,
 	ExhaustedThreshold = 25, -- must regenerate past this after running dry
 	CrouchCameraOffset = -1.7,
-	FlashlightRange = 46,
-	FlashlightBrightness = 2.4,
+	FlashlightRange = 55,
+	FlashlightBrightness = 2.6,
 }
 
-Config.Monster = {
-	PatrolSpeed = 8,
-	InvestigateSpeed = 12,
-	SearchSpeed = 6,
-	StalkSpeed = 4,
-
-	-- Normal (stage 4) chases: escapable by reaching the safe room or breaking line of sight.
-	ChaseBaseSpeed = 20,
-	ChaseRamp = 0.45, -- studs/s gained per second of chase
-	ChaseMaxSpeed = 27,
-	BurstSpeed = 34, -- the "launch" after the scream, and catch-up speed when far away
-	BurstTime = 1.6,
-
-	-- Final chase ("RUN."): never loses track, rubber-bands to stay on the player's heels.
-	FinalBaseSpeed = 25,
-	FinalMaxSpeed = 31,
-	FinalBurstSpeed = 38,
-	HeelDistance = 9, -- inside this range the monster matches (slightly under) the player's speed...
-	HeelSlowThreshold = 14, -- ...unless the player drops under this speed, then it lunges.
-
-	CatchDistance = 4.6,
-	SightRange = 72,
-	FieldOfView = 125,
-	InstantDetectDistance = 9,
-	SuspicionRate = 1.35,
-	SuspicionDecay = 0.35,
-	LoseTrackTime = 5,
-	HearingMultiplier = 1,
-
-	-- Detection sequence: HEAD TURN -> SILENCE -> SCREAM -> CHASE
-	HeadTurnTime = 1.5,
-	SilenceTime = 0.75,
-	ScreamTime = 1.05,
-
-	SearchTime = 7,
-	StalkMinInterval = 30,
-	StalkMaxInterval = 55,
-	StalkMaxDuration = 14,
-	RespawnAfterVanish = 18,
-	DoorSmashStagger = 0.45,
-	SlamDuration = 2.6,
+-- The Girl in White: she only moves while nobody is looking at her.
+Config.Girl = {
+	Speed = 17, -- studs/s while unobserved (player walk 11 / sprint 18)
+	CatchDistance = 3.6,
+	SightRange = 120, -- a player farther than this can't "hold" her with their gaze
+	ViewDot = 0.6, -- how centred on screen she must be to count as watched (cos of angle)
+	ActivateDelay = 14, -- seconds after the flashlight scare before she starts hunting
+	MinSpawnDistance = 45,
+	RespawnDelay = 6, -- after she catches someone
+	BlinkMinInterval = 9, -- the lights "blink" and she lurches closer in the dark
+	BlinkMaxInterval = 16,
+	BlinkDuration = 0.7,
 }
 
-Config.Noise = {
-	Sprint = 42,
-	Walk = 12,
-	Door = 40,
-	Objective = 70,
-	Interact = 25,
-	Scream = 0,
+Config.Timing = {
+	IntroBlackout = 10, -- seconds after first spawn before the lights die
+	TurnScareTimeout = 14, -- if you never turn around, she comes anyway
+	FinalTurnTimeout = 8,
+}
+
+Config.Lighting = {
+	-- "Not too dark": a dim base level so rooms read even without the flashlight.
+	Ambient = Color3.fromRGB(30, 30, 38),
+	OutdoorAmbient = Color3.fromRGB(40, 44, 58),
+	LowPowerLevel = 0.3, -- room lights after the blackout run at this fraction
 }
 
 Config.Camera = {
 	BaseFOV = 70,
-	ChaseFOV = 82,
 	MaxShake = 1,
 	BobAmount = 0.12,
 }
 
 Config.Audio = {
-	AmbientMinGap = 9,
-	AmbientMaxGap = 24,
+	AmbientMinGap = 10,
+	AmbientMaxGap = 26,
 }
 
 return Config

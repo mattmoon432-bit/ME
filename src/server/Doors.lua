@@ -3,14 +3,11 @@
 	it; opening tweens the hinge. Handles:
 	  * player interaction (ProximityPrompt, custom-styled on the client)
 	  * locked doors with per-door messages
-	  * monster smashing (fast swing, dust, loud bang, stagger)
-	  * auto-opening for players while a chase is active, so the chase flows
-	  * PathfindingModifiers so the monster plans routes through closed doors
+	  * the Girl bursting doors open while nobody is watching
+	  * PathfindingModifiers so the Girl plans routes through closed doors
 ]]
 
 local CollectionService = game:GetService("CollectionService")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
@@ -34,16 +31,14 @@ local STYLE = {
 	Door = { Color = Color3.fromRGB(96, 74, 54), Material = Enum.Material.WoodPlanks, Window = true },
 	Locked = { Color = Color3.fromRGB(82, 64, 48), Material = Enum.Material.WoodPlanks, Window = true },
 	SafeDoor = { Color = Color3.fromRGB(78, 92, 100), Material = Enum.Material.DiamondPlate, Window = false, Thick = 0.6 },
-	SecurityDoor = { Color = Color3.fromRGB(70, 74, 80), Material = Enum.Material.Metal, Window = true },
-	BasementDoor = { Color = Color3.fromRGB(92, 60, 40), Material = Enum.Material.CorrodedMetal, Window = false, Thick = 0.5 },
-	ExitDoor = { Color = Color3.fromRGB(40, 44, 46), Material = Enum.Material.Metal, Window = true },
+	KeyDoor = { Color = Color3.fromRGB(92, 60, 40), Material = Enum.Material.CorrodedMetal, Window = false, Thick = 0.5 },
+	FinalDoor = { Color = Color3.fromRGB(46, 50, 54), Material = Enum.Material.Metal, Window = false, Thick = 0.45 },
 }
 
 local LOCKED_MESSAGES = {
 	Locked = "Locked. It won't budge.",
-	SecurityDoor = "The magnetic lock is engaged.",
-	BasementDoor = "A heavy padlock hangs from a chain. You need the basement key.",
-	ExitDoor = "Chained shut from the outside.",
+	KeyDoor = "Padlocked. I need a key.",
+	FinalDoor = "The exit. Chained and padlocked... there has to be a key somewhere.",
 	SafeDoor = "Something is holding it shut from the other side...",
 	Door = "Locked.",
 }
@@ -64,7 +59,7 @@ function Doors.Create(spec: { [string]: any })
 	self.Width = spec.Width
 	self.Height = spec.Height
 	self.IsOpen = false
-	self.Locked = spec.Type == "Locked" or spec.Type == "SecurityDoor" or spec.Type == "BasementDoor" or spec.Type == "ExitDoor"
+	self.Locked = spec.Type == "Locked" or spec.Type == "KeyDoor" or spec.Type == "FinalDoor"
 	self.LockedMessage = LOCKED_MESSAGES[spec.Type] or "Locked."
 	self.Busy = false
 	self.Position = (spec.CFrame :: CFrame).Position + Vector3.new(0, spec.Height / 2, 0)
@@ -85,7 +80,7 @@ function Doors.Create(spec: { [string]: any })
 	Props.Part(m, Vector3.new(0.5, h + 0.5, 1.3), cf * CFrame.new(w / 2 + 0.2, (h + 0.5) / 2, 0), frameColor, Enum.Material.Metal)
 	Props.Part(m, Vector3.new(w + 0.9, 0.5, 1.3), cf * CFrame.new(0, h + 0.25, 0), frameColor, Enum.Material.Metal)
 
-	local double = spec.Type == "ExitDoor"
+	local double = spec.Type == "FinalDoor"
 	local leaves = double and { { -w / 2, w / 2, 1 }, { w / 2, w / 2, -1 } } or { { -w / 2, w, 1 } }
 	self.Hinges = {}
 	for _, leaf in leaves do
@@ -120,7 +115,7 @@ function Doors.Create(spec: { [string]: any })
 			attach(Vector3.new(0.3, 0.2, 0.5), CFrame.new(dir * (leafWidth / 2 - 0.7), -h / 2 + 4.4, side * (thick / 2 + 0.2)), Color3.fromRGB(150, 150, 140), Enum.Material.Metal)
 		end
 		if style.Window then
-			local glassColor = spec.Type == "ExitDoor" and Color3.fromRGB(40, 50, 60) or Color3.fromRGB(70, 80, 80)
+			local glassColor = Color3.fromRGB(70, 80, 80)
 			attach(Vector3.new(leafWidth * 0.45, h * 0.3, thick + 0.05), CFrame.new(0, h * 0.18, 0), glassColor, Enum.Material.Glass, {
 				Transparency = 0.55,
 				CanQuery = false,
@@ -144,7 +139,7 @@ function Doors.Create(spec: { [string]: any })
 	end
 
 	-- Chains across the exit doors / basement door.
-	if spec.Type == "ExitDoor" or spec.Type == "BasementDoor" then
+	if spec.Type == "FinalDoor" or spec.Type == "KeyDoor" then
 		local chain = Instance.new("Model")
 		chain.Name = "Chains"
 		chain.Parent = m
@@ -164,7 +159,7 @@ function Doors.Create(spec: { [string]: any })
 	end
 
 	-- Status lamp above security/safe doors (red = locked, green = open/safe).
-	if spec.Type == "SafeDoor" or spec.Type == "SecurityDoor" or spec.Type == "BasementDoor" then
+	if spec.Type == "KeyDoor" or spec.Type == "FinalDoor" then
 		local lamp = Props.Part(m, Vector3.new(0.6, 0.6, 0.3), cf * CFrame.new(0, h + 1.1, -0.75), Color3.new(), Enum.Material.Neon, {
 			CanCollide = false,
 			Name = "StatusLamp",
@@ -179,16 +174,10 @@ function Doors.Create(spec: { [string]: any })
 		lampBack.CFrame = cf * CFrame.new(0, h + 1.1, 0.75)
 		lampBack.Parent = m
 		self.LampBack = lampBack
-		if spec.Type == "SecurityDoor" then
-			local keypad = Props.Part(m, Vector3.new(0.8, 1.2, 0.2), cf * CFrame.new(w / 2 + 1.1, 4.6, -0.6), Color3.fromRGB(30, 30, 32), Enum.Material.Metal, {
-				CanCollide = false,
-			})
-			self.Keypad = keypad
-		end
 	end
 
 	-- Interaction prompt
-	if spec.Type ~= "ExitGate" then
+	do
 		local prompt = Instance.new("ProximityPrompt")
 		prompt.ActionText = "Open"
 		prompt.ObjectText = spec.Label or ""
@@ -258,7 +247,7 @@ end
 
 -- Swings away from `fromPosition`.
 function Door:Open(fromPosition: Vector3?, fast: boolean?, player: Player?)
-	if self.IsOpen or self.Type == "ExitDoor" then
+	if self.IsOpen then
 		return
 	end
 	self.IsOpen = true
@@ -323,7 +312,7 @@ function Door:Smash(fromPosition: Vector3): boolean
 	if self.IsOpen then
 		return true
 	end
-	if self.Locked or self.Type == "SafeDoor" or self.Type == "ExitDoor" then
+	if self.Locked or self.Type == "SafeDoor" or self.Type == "FinalDoor" then
 		return false
 	end
 	self:Open(fromPosition, true)
@@ -372,36 +361,6 @@ function Doors.Nearest(position: Vector3, filter: ((any) -> boolean)?)
 		end
 	end
 	return best, bestDist
-end
-
--- While a chase is running, doors swing open for fleeing players so the chase never
--- stalls on a prompt.
-function Doors.StartAutoOpen()
-	local accumulator = 0
-	RunService.Heartbeat:Connect(function(dt)
-		accumulator += dt
-		if accumulator < 0.1 then
-			return
-		end
-		accumulator = 0
-		if not Workspace:GetAttribute("ChaseActive") then
-			return
-		end
-		for _, player in Players:GetPlayers() do
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if root and not player:GetAttribute("Dead") then
-				for _, door in Doors.All do
-					if not door.IsOpen and not door.Locked and door.Type ~= "ExitDoor" and door.Type ~= "ExitGate" then
-						local offset = door.Position - root.Position
-						if offset.Magnitude < 7.5 and math.abs(offset.Y) < 8 then
-							door:Open(root.Position, false, player)
-						end
-					end
-				end
-			end
-		end
-	end)
 end
 
 return Doors

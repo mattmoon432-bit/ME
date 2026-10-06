@@ -3,7 +3,7 @@
 	  Shift  sprint (stamina; slower drain during a chase - adrenaline)
 	  C/Ctrl crouch (quieter, harder to see, lower camera)
 	  F      flashlight (camera-mounted spotlight with lag & sway; visible to others)
-	Chase speed boost, first/third-person view, and server replication of state.
+	First/third-person view, control locks (see Lock.lua) and server replication of state.
 ]]
 
 local ContextActionService = game:GetService("ContextActionService")
@@ -17,6 +17,7 @@ local Remotes = require(Shared.Remotes)
 local Util = require(Shared.Util)
 
 local Audio = require(script.Parent.Audio)
+local Lock = require(script.Parent.Lock)
 local Settings = require(script.Parent.Settings)
 
 local Movement = {}
@@ -30,7 +31,6 @@ Movement.Sprinting = false
 Movement.Crouching = false
 Movement.Flashlight = false
 Movement.Afraid = false
-Movement.Chased = false
 Movement.Frozen = false
 
 local player = Players.LocalPlayer
@@ -96,7 +96,19 @@ function Movement.SetActive(active: boolean)
 	end
 end
 
+local function hasFlashlight(): boolean
+	return Workspace:GetAttribute("FlashlightTaken") == true
+end
+
+function Movement.SetFlashlight(on: boolean)
+	Movement.Flashlight = on and hasFlashlight()
+	sendState()
+end
+
 local function toggleFlashlight()
+	if not hasFlashlight() then
+		return
+	end
 	Movement.Flashlight = not Movement.Flashlight
 	Audio.Play("Player", "Flashlight")
 	sendState()
@@ -180,23 +192,17 @@ function Movement.Init()
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 
-		-- Chase state (boost applies to whoever is being hunted, and to everyone in the finale)
-		local monster = Workspace:FindFirstChild("Grinner")
-		local chaseTarget = monster and monster:GetAttribute("ChaseTarget") or 0
-		Movement.Chased = Workspace:GetAttribute("ChaseActive") == true
-			and (chaseTarget == player.UserId or Workspace:GetAttribute("FinalChase") == true)
+		local girl = Workspace:FindFirstChild("Girl")
+		local locked = Lock.MoveLocked()
+		if humanoid then
+			humanoid.JumpHeight = (locked or Movement.Frozen) and 0 or 4.5
+		end
 
-		if Movement.Active and humanoid and root and not Movement.Frozen and not player:GetAttribute("Dead") then
+		if Movement.Active and humanoid and root and not Movement.Frozen and not locked and not player:GetAttribute("Dead") then
 			local moving = humanoid.MoveDirection.Magnitude > 0.1
-			local boost = Movement.Chased and P.ChaseBoost or 0
-			local finalChase = Workspace:GetAttribute("FinalChase") == true and Movement.Chased
 			local sprinting = wantSprint and moving and not Movement.Crouching and not Movement.Exhausted
 			if sprinting then
-				local drain = Movement.Chased and P.StaminaDrainChase or P.StaminaDrain
-				if finalChase then
-					drain = 0 -- pure adrenaline: the finale is about routing, not stamina
-				end
-				Movement.Stamina = math.max(0, Movement.Stamina - drain * dt)
+				Movement.Stamina = math.max(0, Movement.Stamina - P.StaminaDrain * dt)
 				lastDrain = os.clock()
 				if Movement.Stamina <= 0 then
 					Movement.Exhausted = true
@@ -213,11 +219,11 @@ function Movement.Init()
 
 			local speed
 			if Movement.Crouching then
-				speed = P.CrouchSpeed + boost * 0.5
+				speed = P.CrouchSpeed
 			elseif sprinting then
-				speed = P.SprintSpeed + boost
+				speed = P.SprintSpeed
 			else
-				speed = P.WalkSpeed + boost * 0.5
+				speed = P.WalkSpeed
 			end
 			if Movement.Exhausted then
 				speed *= 0.85
@@ -227,23 +233,25 @@ function Movement.Init()
 			local current = humanoid.CameraOffset
 			humanoid.CameraOffset = Vector3.new(0, Util.damp(current.Y, offsetY, 10, dt), 0)
 			sendState()
-		elseif humanoid and (Movement.Frozen or player:GetAttribute("Dead")) then
+		elseif humanoid and (Movement.Frozen or locked or player:GetAttribute("Dead")) then
 			humanoid.WalkSpeed = 0
 		end
 
 		-- Flashlight follows the camera with a little lag and sway.
 		if flashPart and flashLight and camera then
-			local on = Movement.Active and Movement.Flashlight and not player:GetAttribute("Dead")
+			local on = Movement.Active and Movement.Flashlight and hasFlashlight() and not player:GetAttribute("Dead")
 			local target = camera.CFrame * CFrame.new(0.6, -0.5, -0.4)
 			flashCF = flashCF:Lerp(target, 1 - math.exp(-18 * dt))
 			flashCF = CFrame.new(target.Position) * (flashCF - flashCF.Position)
 			flashPart.CFrame = flashCF
 			local brightness = on and P.FlashlightBrightness or 0
-			-- stutters when the monster is close
-			if on and monster and not monster:GetAttribute("Hidden") then
-				local head = monster:FindFirstChild("Head") :: BasePart?
-				if head and (head.Position - camera.CFrame.Position).Magnitude < 28 then
-					brightness *= math.noise(os.clock() * 25, 3) > 0.1 and 1 or 0.08
+			-- dies completely during a blink; stutters when she is close
+			if Workspace:GetAttribute("Blink") then
+				brightness = 0
+			elseif on and girl and not girl:GetAttribute("Hidden") then
+				local head = girl:FindFirstChild("Head") :: BasePart?
+				if head and (head.Position - camera.CFrame.Position).Magnitude < 22 then
+					brightness *= math.noise(os.clock() * 25, 3) > 0.15 and 1 or 0.1
 				end
 			end
 			flashLight.Brightness = brightness
@@ -256,12 +264,12 @@ function Movement.Init()
 			end
 		end
 
-		-- Report where we're looking (for "it vanishes when you look away").
+		-- Report where we're looking (she can only move while nobody is looking).
 		lookTimer += dt
-		if Movement.Active and camera and lookTimer > 0.2 then
+		if Movement.Active and camera and lookTimer > 0.08 then
 			lookTimer = 0
 			local look = camera.CFrame.LookVector
-			if look:Dot(lastLook) < 0.995 then
+			if look:Dot(lastLook) < 0.999 then
 				lastLook = look
 				Remotes.Event("CameraLook"):FireServer(look)
 			end

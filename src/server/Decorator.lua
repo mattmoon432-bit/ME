@@ -1,11 +1,15 @@
 --[[
-	Furnishes each room and adds environmental storytelling: blood trails that lead
-	somewhere, scratch marks around the safe-room door, messages left by staff, a
-	sheet-covered gurney, obstacles on the escape route, etc.
+	Furnishes each room and adds environmental storytelling.
 
-	Also records named anchor CFrames (map.Anchors) used by Interactions to place
-	objective items, notes and scare props.
+	Every wall-mounted decoration (graffiti, scratches, blood, signs, drawings) goes
+	through `onWall`, which raycasts into the wall behind it: if there is no real wall
+	(e.g. the spot is a doorway or an open corridor junction) the decoration is skipped
+	instead of floating in mid-air.
+
+	Records named anchor CFrames (map.Anchors) for Interactions to place objective items.
 ]]
+
+local Workspace = game:GetService("Workspace")
 
 local Props = require(script.Parent.Props)
 
@@ -22,6 +26,23 @@ function Decorator.Decorate(map)
 	local root = map.Folders.Props
 	map.Anchors = {}
 	local anchors = map.Anchors
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Include
+	params.FilterDescendantsInstances = { map.Folders.Structure }
+
+	-- True when there is solid wall behind every part of a decoration `width` wide.
+	local function onWall(cf: CFrame, width: number, height: number?): boolean
+		local h = (height or 0) / 2
+		for _, offset in { Vector3.zero, Vector3.new(-width / 2 * 0.95, 0, 0), Vector3.new(width / 2 * 0.95, 0, 0), Vector3.new(0, h * 0.9, 0), Vector3.new(0, -h * 0.9, 0) } do
+			local origin = (cf * CFrame.new(offset)).Position + cf.LookVector * 0.3
+			local result = Workspace:Raycast(origin, -cf.LookVector * 1.2, params)
+			if not result then
+				return false
+			end
+		end
+		return true
+	end
 
 	local function folder(name: string): Folder
 		local f = Instance.new("Folder")
@@ -45,78 +66,152 @@ function Decorator.Decorate(map)
 		end
 		return CFrame.lookAt(pos, pos + look)
 	end
-	-- Floor CFrame `depth` studs from a wall, LookVector pointing into the room.
 	local function against(minV: Vector3, maxV: Vector3, side: string, t: number, depth: number): CFrame
-		local cf = wall(minV, maxV, side, t, 0, depth)
-		return cf
+		return wall(minV, maxV, side, t, 0, depth)
 	end
 	local function at(minV: Vector3, maxV: Vector3, fx: number, fz: number, yaw: number?): CFrame
 		return CFrame.new(lerp(minV.X, maxV.X, fx), minV.Y, lerp(minV.Z, maxV.Z, fz)) * A(0, yaw or 0, 0)
 	end
 
+	-- Validated wall decorations
+	local function writing(parent: Instance, cf: CFrame, text: string, width: number)
+		if onWall(cf, width, width * 0.3) then
+			Props.BloodWriting(parent, cf, text, width, rng)
+		end
+	end
+	local function scratches(parent: Instance, cf: CFrame, size: number)
+		if onWall(cf, size, size) then
+			Props.Scratches(parent, cf, size, rng)
+		end
+	end
+	local function smear(parent: Instance, cf: CFrame, size: Vector2, hands: boolean?)
+		if onWall(cf, size.X, size.Y) then
+			Props.BloodSmear(parent, cf, size, rng, hands)
+		end
+	end
+	local function sign(parent: Instance, cf: CFrame, text: string, width: number, color: Color3?, textColor: Color3?)
+		if onWall(cf, width, width * 0.25) then
+			Props.Sign(parent, cf * CFrame.new(0, 0, -0.06), text, width, color, textColor)
+		end
+	end
+	-- A child's crayon drawing: a stick figure girl with long hair and a message.
+	local function drawing(parent: Instance, cf: CFrame, caption: string)
+		if not onWall(cf, 3, 3.6) then
+			return
+		end
+		local _, gui = Props.WallCanvas(parent, cf, Vector2.new(3, 3.6))
+		local paper = Instance.new("Frame")
+		paper.Size = UDim2.fromScale(1, 1)
+		paper.BackgroundColor3 = Color3.fromRGB(220, 214, 196)
+		paper.BorderSizePixel = 0
+		paper.Rotation = rng:NextNumber(-5, 5)
+		paper.Parent = gui
+		local function line(x: number, y: number, w: number, h: number, rot: number, color: Color3)
+			local f = Instance.new("Frame")
+			f.AnchorPoint = Vector2.new(0.5, 0.5)
+			f.Position = UDim2.fromScale(x, y)
+			f.Size = UDim2.fromScale(w, h)
+			f.Rotation = rot
+			f.BackgroundColor3 = color
+			f.BorderSizePixel = 0
+			f.Parent = paper
+			return f
+		end
+		local black, red = Color3.fromRGB(20, 20, 20), Color3.fromRGB(170, 20, 20)
+		local head = line(0.5, 0.25, 0.22, 0.18, 0, black)
+		local corner = Instance.new("UICorner")
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = head
+		line(0.5, 0.5, 0.3, 0.3, 0, Color3.fromRGB(230, 230, 230)) -- white dress
+		line(0.5, 0.5, 0.32, 0.02, 0, black)
+		line(0.3, 0.45, 0.25, 0.02, -30, black) -- arms reaching
+		line(0.7, 0.45, 0.25, 0.02, 30, black)
+		line(0.44, 0.73, 0.02, 0.15, 0, black)
+		line(0.56, 0.73, 0.02, 0.15, 0, black)
+		line(0.5, 0.33, 0.12, 0.02, 0, red) -- smile
+		local text = Instance.new("TextLabel")
+		text.BackgroundTransparency = 1
+		text.Size = UDim2.fromScale(0.9, 0.14)
+		text.Position = UDim2.fromScale(0.05, 0.84)
+		text.Font = Enum.Font.IndieFlower
+		text.TextScaled = true
+		text.TextColor3 = red
+		text.Text = caption
+		text.Parent = paper
+	end
+
 	---------------------------------------------------------------------------------------
-	-- LOBBY / RECEPTION
+	-- NIGHT OFFICE (start)
+	---------------------------------------------------------------------------------------
+	do
+		local f = folder("Office")
+		local mn, mx = map:Bounds("Office")
+		local desk = against(mn, mx, "S", 0.5, 3)
+		Props.Desk(f, desk)
+		Props.Chair(f, desk * CFrame.new(0.4, 0, 2.4) * A(0, 180, 0))
+		Props.Monitor(f, desk * CFrame.new(-1.6, 3.25, 0.4), "HOLLOWMERE\nNIGHT LOG\n02:13 AM", true)
+		anchors.Flashlight = desk * CFrame.new(1.2, 3.27, -0.3)
+		anchors.OfficeNote = desk * CFrame.new(-0.2, 3.27, -0.6)
+		Props.Part(f, Vector3.new(0.35, 0.45, 0.35), desk * CFrame.new(2.4, 3.48, 0.5), Color3.fromRGB(200, 196, 186), Enum.Material.SmoothPlastic, {
+			Shape = Enum.PartType.Cylinder,
+			Name = "Mug",
+		})
+		Props.FilingCabinet(f, against(mn, mx, "E", 0.3, 1.3))
+		Props.FilingCabinet(f, against(mn, mx, "E", 0.45, 1.3), true)
+		Props.Shelf(f, against(mn, mx, "W", 0.5, 1.2), rng)
+		Props.Papers(f, (at(mn, mx, 0.4, 0.55)).Position, 3, 8, rng)
+		Props.Clock(f, wall(mn, mx, "E", 0.75, 9, 0.15))
+		sign(f, wall(mn, mx, "W", 0.85, 7), "NIGHT STAFF ONLY", 5)
+		-- The player starts in the middle of the room, facing the desk.
+		local spawnPos = Vector3.new(lerp(mn.X, mx.X, 0.5), mn.Y + 3, lerp(mn.Z, mx.Z, 0.45))
+		anchors.Spawn = CFrame.lookAt(spawnPos, Vector3.new(spawnPos.X, spawnPos.Y, mx.Z))
+		anchors.OfficeCenter = CFrame.new(lerp(mn.X, mx.X, 0.5), mn.Y, lerp(mn.Z, mx.Z, 0.5))
+	end
+
+	---------------------------------------------------------------------------------------
+	-- LOBBY (the bricked-up exit)
 	---------------------------------------------------------------------------------------
 	do
 		local f = folder("Lobby")
 		local mn, mx = map:Bounds("Lobby")
-		-- Reception counter facing the entrance.
-		local counter = at(mn, mx, 0.62, 0.3, -90)
-		Props.Part(f, Vector3.new(12, 3.6, 2.4), counter * CFrame.new(0, 1.8, 0), Color3.fromRGB(70, 48, 36), Enum.Material.WoodPlanks)
-		Props.Part(f, Vector3.new(12.4, 0.3, 3), counter * CFrame.new(0, 3.75, 0), Color3.fromRGB(110, 104, 96), Enum.Material.Marble)
-		Props.Monitor(f, counter * CFrame.new(-3, 3.9, 0.4), "HOLLOWMERE\nPATIENT INTAKE\n\nSESSION TIMED OUT", false)
-		Props.Chair(f, counter * CFrame.new(1, 0, 3) * A(0, 200, 0), true)
-		anchors.ReceptionDesk = counter * CFrame.new(3, 3.92, 0)
-		Props.Papers(f, (counter * CFrame.new(0, 0, -3)).Position, 4, 10, rng)
-		Props.Sign(f, wall(mn, mx, "E", 0.18, 9.5), "HOLLOWMERE PSYCHIATRIC ANNEX", 13, Color3.fromRGB(30, 34, 32))
-		-- Waiting area.
-		Props.Bench(f, against(mn, mx, "N", 0.3, 1.4))
-		Props.Bench(f, against(mn, mx, "S", 0.35, 1.4))
-		Props.Bench(f, at(mn, mx, 0.32, 0.55, 90) * CFrame.new(0, 0, 0))
-		Props.DeadPlant(f, against(mn, mx, "N", 0.08, 1.2))
-		Props.DeadPlant(f, against(mn, mx, "S", 0.08, 1.2))
-		Props.VendingMachine(f, against(mn, mx, "S", 0.78, 1.6))
-		Props.Clock(f, wall(mn, mx, "N", 0.62, 10, 0.15))
-		Props.Chair(f, at(mn, mx, 0.4, 0.75, 40), true)
-		-- Story: blood leads from the entrance into the corridor.
-		Props.BloodWriting(f, wall(mn, mx, "W", 0.2, 6), "THERE IS NO WAY OUT", 9, rng)
-		Props.DragMarks(f, Vector3.new(mn.X + 4, mn.Y, lerp(mn.Z, mx.Z, 0.52)), Vector3.new(mx.X + 2, mn.Y, lerp(mn.Z, mx.Z, 0.52)))
-		Props.BloodPool(f, Vector3.new(mn.X + 4, mn.Y, lerp(mn.Z, mx.Z, 0.52)), 1.6, rng)
-		Props.FogEmitter(f, CFrame.new((mn + mx) / 2 + Vector3.new(0, 1.2 - (mx.Y - mn.Y) / 2, 0)), Vector3.new(30, 2, 40), 3)
-		Props.Dust(f, CFrame.new((mn + mx) / 2), Vector3.new(30, 10, 40))
-		anchors.LobbySpawn = CFrame.lookAt(Vector3.new(lerp(mn.X, mx.X, 0.25), mn.Y + 3, lerp(mn.Z, mx.Z, 0.5)), Vector3.new(mx.X + 20, mn.Y + 3, lerp(mn.Z, mx.Z, 0.5)))
-		anchors.ExitNote = wall(mn, mx, "W", 0.28, 4.5, 0.1)
+		local counter = at(mn, mx, 0.62, 0.18, 0)
+		Props.Part(f, Vector3.new(8, 3.6, 2.4), counter * CFrame.new(0, 1.8, 0), Color3.fromRGB(70, 48, 36), Enum.Material.WoodPlanks)
+		Props.Part(f, Vector3.new(8.4, 0.3, 3), counter * CFrame.new(0, 3.75, 0), Color3.fromRGB(110, 104, 96), Enum.Material.Marble)
+		Props.Bench(f, against(mn, mx, "S", 0.25, 1.4))
+		Props.DeadPlant(f, against(mn, mx, "E", 0.08, 1.2))
+		Props.DeadPlant(f, against(mn, mx, "E", 0.92, 1.2))
+		Props.Clock(f, wall(mn, mx, "N", 0.8, 10, 0.15))
+		writing(f, wall(mn, mx, "N", 0.78, 6.5), "NO WAY OUT", 6)
+		Props.Papers(f, (at(mn, mx, 0.5, 0.6)).Position, 4, 10, rng)
+		Props.FogEmitter(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 1.2, (mn.Z + mx.Z) / 2), Vector3.new(16, 2, 26), 3)
 	end
 
 	---------------------------------------------------------------------------------------
-	-- EAST WARD CORRIDOR (long main hallway)
+	-- MAIN CORRIDOR
 	---------------------------------------------------------------------------------------
 	do
 		local f = folder("Hall")
 		local mn, mx = map:Bounds("Hall")
-		Props.Gurney(f, CFrame.new(lerp(mn.X, mx.X, 0.1), mn.Y, mn.Z + 2) * A(0, 84, 0), true)
-		Props.Cart(f, CFrame.new(lerp(mn.X, mx.X, 0.4), mn.Y, mx.Z - 1.8) * A(0, 95, 0), rng)
-		Props.Debris(f, CFrame.new(lerp(mn.X, mx.X, 0.55), mn.Y, mn.Z + 2), rng, 0.7)
-		Props.Chair(f, CFrame.new(lerp(mn.X, mx.X, 0.66), mn.Y, mx.Z - 2) * A(0, 30, 0), true)
-		Props.Papers(f, Vector3.new(lerp(mn.X, mx.X, 0.3), mn.Y, (mn.Z + mx.Z) / 2), 3, 12, rng)
-		Props.Papers(f, Vector3.new(lerp(mn.X, mx.X, 0.75), mn.Y, (mn.Z + mx.Z) / 2), 3, 8, rng)
-		Props.Puddle(f, Vector3.new(lerp(mn.X, mx.X, 0.85), mn.Y, (mn.Z + mx.Z) / 2 + 1), Vector2.new(5, 3))
-		Props.BloodWriting(f, wall(mn, mx, "N", 0.27, 6.5), "DON'T LET IT SEE YOU RUN", 10, rng)
-		Props.Scratches(f, wall(mn, mx, "S", 0.6, 5), 5, rng)
-		Props.Scratches(f, wall(mn, mx, "N", 0.88, 3.5), 4, rng)
-		Props.BloodSmear(f, wall(mn, mx, "S", 0.43, 3.5), Vector2.new(5, 4), rng, true)
-		-- drag marks into the ward
-		local wardDoorX = 10 * map.CELL + map.CELL / 2
-		Props.DragMarks(f, Vector3.new(wardDoorX - 14, mn.Y, mn.Z + 3), Vector3.new(wardDoorX, mn.Y, mx.Z + 1))
-		Props.Sign(f, wall(mn, mx, "N", 0.04, 9), "<- RECEPTION", 4)
-		Props.Sign(f, wall(mn, mx, "S", 0.96, 9), "SECURITY ->", 4)
+		local function tx(x: number): number
+			return (x - mn.X) / (mx.X - mn.X)
+		end
+		Props.Gurney(f, CFrame.new(72, mn.Y, mn.Z + 2) * A(0, 86, 0), true)
+		Props.Wheelchair(f, CFrame.new(112, mn.Y, mx.Z - 2) * A(0, -60, 0))
+		Props.Cart(f, CFrame.new(155, mn.Y, mn.Z + 1.8) * A(0, 92, 0), rng)
+		Props.Debris(f, CFrame.new(122, mn.Y, mn.Z + 2.2), rng, 0.5)
+		Props.Papers(f, Vector3.new(80, mn.Y, (mn.Z + mx.Z) / 2), 3, 12, rng)
+		Props.Papers(f, Vector3.new(130, mn.Y, (mn.Z + mx.Z) / 2), 3, 8, rng)
+		Props.Puddle(f, Vector3.new(36, mn.Y, (mn.Z + mx.Z) / 2), Vector2.new(5, 3))
+		writing(f, wall(mn, mx, "N", tx(120), 7), "SHE IS ALWAYS BEHIND YOU", 12)
+		drawing(f, wall(mn, mx, "S", tx(80), 5), "PLAY WITH ME")
+		drawing(f, wall(mn, mx, "S", tx(118), 5.2), "DONT LOOK AWAY")
+		scratches(f, wall(mn, mx, "N", tx(40), 4.5), 4)
+		smear(f, wall(mn, mx, "S", tx(152), 3.5), Vector2.new(4, 4), true)
+		Props.DragMarks(f, Vector3.new(118, mn.Y, mn.Z + 3), Vector3.new(135, mn.Y, mx.Z + 1))
+		sign(f, wall(mn, mx, "N", tx(32), 9), "<- EXIT", 3)
 		Props.FogEmitter(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 1, (mn.Z + mx.Z) / 2), Vector3.new(mx.X - mn.X, 2, 8), 5)
 		Props.Dust(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 7, (mn.Z + mx.Z) / 2), Vector3.new(mx.X - mn.X, 10, 8))
-		-- The wheelchair that rolls across the corridor (Interactions animates it).
-		anchors.Wheelchair = CFrame.new(lerp(mn.X, mx.X, 0.62), mn.Y, mn.Z + 1.6) * A(0, 180, 0)
-		anchors.HallMid = CFrame.new(lerp(mn.X, mx.X, 0.5), mn.Y + 3, (mn.Z + mx.Z) / 2)
-		anchors.HallEast = CFrame.new(mx.X - 6, mn.Y + 3, (mn.Z + mx.Z) / 2)
-		anchors.HallWest = CFrame.new(mn.X + 2, mn.Y, (mn.Z + mx.Z) / 2)
+		anchors.Checkpoint = CFrame.lookAt(Vector3.new(95, mn.Y + 3, (mn.Z + mx.Z) / 2), Vector3.new(60, mn.Y + 3, (mn.Z + mx.Z) / 2))
 	end
 
 	---------------------------------------------------------------------------------------
@@ -124,214 +219,85 @@ function Decorator.Decorate(map)
 	---------------------------------------------------------------------------------------
 	do
 		local f = folder("Back")
-		local mn, mx = map:Bounds("Back", 1)
+		local mn, mx = map:Bounds("Back", 2)
 		local pipeY = mn.Y + 12.4
-		Props.Pipe(f, Vector3.new(mn.X - 8, pipeY, mn.Z + 1), Vector3.new(mx.X + 8, pipeY, mn.Z + 1), 0.6)
-		Props.Pipe(f, Vector3.new(mn.X - 8, pipeY - 1.4, mn.Z + 2.3), Vector3.new(mx.X + 8, pipeY - 1.4, mn.Z + 2.3), 0.35, Color3.fromRGB(60, 70, 80))
-		for i = 0, 6 do
-			local x = lerp(mn.X, mx.X, i / 6)
-			if i % 2 == 0 then
-				Props.Locker(f, CFrame.new(x + 3, mn.Y, mn.Z + 1.2) * A(0, 180, 0), i == 4)
-			else
-				Props.Crate(f, CFrame.new(x, mn.Y, mn.Z + 2) * A(0, rng:NextNumber(0, 40), 0), rng:NextNumber(2.4, 3.4))
-			end
+		Props.Pipe(f, Vector3.new(mn.X - 9, pipeY, mx.Z - 1), Vector3.new(mx.X + 9, pipeY, mx.Z - 1), 0.6)
+		Props.Pipe(f, Vector3.new(mn.X - 9, pipeY - 1.4, mx.Z - 2.3), Vector3.new(mx.X + 9, pipeY - 1.4, mx.Z - 2.3), 0.35, Color3.fromRGB(60, 70, 80))
+		for _, x in { 56, 78, 90, 122, 132 } do
+			Props.Locker(f, CFrame.new(x, mn.Y, mx.Z - 1.2), x == 90)
 		end
-		Props.Chain(f, Vector3.new(lerp(mn.X, mx.X, 0.35), mn.Y + 14, (mn.Z + mx.Z) / 2), 7)
-		Props.Chain(f, Vector3.new(lerp(mn.X, mx.X, 0.37), mn.Y + 14, (mn.Z + mx.Z) / 2 + 1), 5)
-		Props.BloodWriting(f, wall(mn, mx, "S", 0.15, 6), "IT WALKS THESE HALLS", 9, rng)
-		Props.BloodSmear(f, wall(mn, mx, "S", 0.7, 3), Vector2.new(4, 3), rng, true)
-		Props.Scratches(f, wall(mn, mx, "N", 0.5, 4), 5, rng)
+		Props.Crate(f, CFrame.new(115, mn.Y, mx.Z - 2) * A(0, 20, 0), 3)
+		Props.Chain(f, Vector3.new(98, mn.Y + 14, (mn.Z + mx.Z) / 2), 7)
+		writing(f, wall(mn, mx, "S", (84 - mn.X) / (mx.X - mn.X), 7.5), "DON'T LOOK AWAY", 9)
+		smear(f, wall(mn, mx, "N", (110 - mn.X) / (mx.X - mn.X), 3), Vector2.new(4, 3), true)
 		Props.FogEmitter(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 1, (mn.Z + mx.Z) / 2), Vector3.new(mx.X - mn.X, 2, 8), 5)
-		-- west & east legs
-		local wmn, wmx = map:Bounds("Back", 2)
+		local wmn, wmx = map:Bounds("Back", 1)
 		Props.Barrel(f, CFrame.new(wmn.X + 2, wmn.Y, lerp(wmn.Z, wmx.Z, 0.4)), nil, true)
-		Props.Scratches(f, wall(wmn, wmx, "E", 0.6, 4), 4, rng)
+		scratches(f, wall(wmn, wmx, "W", 0.5, 4), 4)
 		local emn, emx = map:Bounds("Back", 3)
-		Props.Crate(f, CFrame.new(emx.X - 2, emn.Y, lerp(emn.Z, emx.Z, 0.3)), 3)
+		Props.Crate(f, CFrame.new(emx.X - 2, emn.Y, lerp(emn.Z, emx.Z, 0.35)), 3)
 		Props.BloodPool(f, Vector3.new((emn.X + emx.X) / 2, emn.Y, lerp(emn.Z, emx.Z, 0.7)), 1.2, rng)
 	end
 
 	---------------------------------------------------------------------------------------
-	-- STORAGE (fuse is here)
+	-- BREAK ROOM
+	---------------------------------------------------------------------------------------
+	do
+		local f = folder("Break")
+		local mn, mx = map:Bounds("Break")
+		Props.Sofa(f, against(mn, mx, "W", 0.5, 1.8))
+		local table_ = at(mn, mx, 0.55, 0.5)
+		Props.Table(f, table_)
+		Props.Chair(f, at(mn, mx, 0.55, 0.36, 180))
+		Props.Chair(f, at(mn, mx, 0.7, 0.55, -90), true)
+		Props.VendingMachine(f, against(mn, mx, "E", 0.3, 1.6))
+		Props.Locker(f, against(mn, mx, "E", 0.75, 1.2))
+		anchors.BreakNote = table_ * CFrame.new(0.8, 3.13, 0.3)
+		drawing(f, wall(mn, mx, "N", 0.25, 5), "SHE MOVES IN THE DARK")
+	end
+
+	---------------------------------------------------------------------------------------
+	-- WARD C (storage key)
+	---------------------------------------------------------------------------------------
+	do
+		local f = folder("Ward")
+		local mn, mx = map:Bounds("Ward")
+		for i = 0, 2 do
+			local x = lerp(mn.X, mx.X, ({ 0.15, 0.45, 0.85 })[i + 1])
+			Props.Bed(f, CFrame.new(x, mn.Y, mx.Z - 4.5), i == 1, true)
+			Props.IVStand(f, CFrame.new(x + 3, mn.Y, mx.Z - 2))
+			Props.Curtain(f, CFrame.new(x + 4.6, mn.Y, mx.Z - 5) * A(0, 90, 0), 8, i == 2)
+		end
+		Props.Bed(f, CFrame.new(lerp(mn.X, mx.X, 0.8), mn.Y, mn.Z + 4.5), false, true)
+		-- the key lies on the bloody bed in the far corner
+		anchors.StorageKey = CFrame.new(lerp(mn.X, mx.X, 0.45), mn.Y + 2.82, mx.Z - 3.8)
+		writing(f, wall(mn, mx, "E", 0.5, 7), "SHE WAS HERE FIRST", 9)
+		for _ = 1, 4 do
+			scratches(f, wall(mn, mx, "W", rng:NextNumber(0.2, 0.8), rng:NextNumber(2, 6)), 3.5)
+		end
+		Props.BloodPool(f, (at(mn, mx, 0.6, 0.4)).Position, 1.6, rng)
+		Props.FogEmitter(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 1, (mn.Z + mx.Z) / 2), Vector3.new(36, 2, 26), 3)
+	end
+
+	---------------------------------------------------------------------------------------
+	-- STORAGE (exit key) - padlocked
 	---------------------------------------------------------------------------------------
 	do
 		local f = folder("Storage")
 		local mn, mx = map:Bounds("Storage")
 		Props.Shelf(f, against(mn, mx, "N", 0.3, 1.2), rng)
 		Props.Shelf(f, against(mn, mx, "N", 0.75, 1.2), rng)
-		local midShelf = at(mn, mx, 0.35, 0.55, 0)
-		Props.Shelf(f, midShelf, rng)
+		local mid = at(mn, mx, 0.5, 0.5, 0)
+		Props.Shelf(f, mid, rng)
 		Props.Shelf(f, against(mn, mx, "W", 0.6, 1.2), rng, 9)
-		-- a toppled shelf
-		Props.Part(f, Vector3.new(7, 1.2, 9), at(mn, mx, 0.78, 0.6, 20) * CFrame.new(0, 0.6, 0), Props.Colors.RUST, Enum.Material.CorrodedMetal)
 		Props.Crate(f, at(mn, mx, 0.85, 0.85, 15), 3)
-		Props.Crate(f, at(mn, mx, 0.85, 0.85, 40) * CFrame.new(0, 3, 0), 2.4)
 		Props.Barrel(f, at(mn, mx, 0.15, 0.88), Color3.fromRGB(40, 60, 90))
-		Props.Barrel(f, at(mn, mx, 0.25, 0.9), Color3.fromRGB(40, 60, 90), true)
-		Props.Papers(f, (at(mn, mx, 0.55, 0.75)).Position, 2, 5, rng)
-		Props.Scratches(f, wall(mn, mx, "E", 0.3, 5), 4, rng)
-		Props.Dust(f, CFrame.new((mn + mx) / 2 + Vector3.new(0, 5, 0)), Vector3.new(26, 10, 36))
-		anchors.FuseShelf = midShelf * CFrame.new(1.2, 3.35, 0)
-	end
-
-	---------------------------------------------------------------------------------------
-	-- DR. HALE'S OFFICE
-	---------------------------------------------------------------------------------------
-	do
-		local f = folder("Office")
-		local mn, mx = map:Bounds("Office")
-		local desk = at(mn, mx, 0.5, 0.35, 180)
-		Props.Desk(f, desk)
-		Props.Chair(f, desk * CFrame.new(-0.5, 0, 2.6) * A(0, 170, 0))
-		Props.Monitor(f, desk * CFrame.new(-1.5, 3.25, 0.3), "SUBJECT 09\nOBSERVATION LOG\n\n[FILE CORRUPTED]", false)
-		anchors.OfficeDesk = desk * CFrame.new(1.2, 3.27, 0.2)
-		anchors.OfficeDrawer = desk * CFrame.new(1.6, 2.4, -1.4)
-		anchors.Phone = desk * CFrame.new(2.4, 3.25, -0.5)
-		Props.FilingCabinet(f, against(mn, mx, "E", 0.2, 1.3), true)
-		Props.FilingCabinet(f, against(mn, mx, "E", 0.38, 1.3))
-		Props.Shelf(f, against(mn, mx, "W", 0.3, 1.2), rng)
-		Props.Sofa(f, against(mn, mx, "W", 0.75, 1.6))
-		Props.Papers(f, (at(mn, mx, 0.5, 0.65)).Position, 4, 18, rng)
-		Props.Sign(f, wall(mn, mx, "N", 0.5, 8.5), "DR. E. HALE - CLINICAL DIRECTOR", 8)
-		Props.BloodWriting(f, wall(mn, mx, "E", 0.75, 6), "HE ONLY SMILES", 8, rng)
-		Props.BloodSmear(f, wall(mn, mx, "S", 0.2, 3.5), Vector2.new(3, 3), rng, true)
-		Props.Clock(f, wall(mn, mx, "N", 0.15, 10, 0.15))
-		Props.Dust(f, CFrame.new((mn + mx) / 2 + Vector3.new(0, 5, 0)), Vector3.new(26, 10, 36))
-		anchors.OfficeDoorway = CFrame.new(lerp(mn.X, mx.X, 0.5), mn.Y, mx.Z - 3)
-	end
-
-	---------------------------------------------------------------------------------------
-	-- GENERATOR ROOM (fuse box)
-	---------------------------------------------------------------------------------------
-	do
-		local f = folder("Generator")
-		local mn, mx = map:Bounds("Generator")
-		Props.Generator(f, at(mn, mx, 0.32, 0.4, 0))
-		Props.Pipe(f, Vector3.new(lerp(mn.X, mx.X, 0.36), mn.Y + 10, lerp(mn.Z, mx.Z, 0.45)), Vector3.new(lerp(mn.X, mx.X, 0.36), mn.Y + 14, lerp(mn.Z, mx.Z, 0.45)), 0.5)
-		Props.Pipe(f, Vector3.new(mn.X, mn.Y + 12, mn.Z + 2), Vector3.new(mx.X, mn.Y + 12, mn.Z + 2), 0.55)
-		Props.Pipe(f, Vector3.new(mn.X + 1.5, mn.Y, mn.Z + 1.5), Vector3.new(mn.X + 1.5, mn.Y + 14, mn.Z + 1.5), 0.4)
-		Props.Barrel(f, at(mn, mx, 0.08, 0.85), Color3.fromRGB(150, 110, 20))
-		Props.Barrel(f, at(mn, mx, 0.16, 0.9), Color3.fromRGB(150, 110, 20))
-		Props.Cart(f, at(mn, mx, 0.6, 0.15, 90), rng)
-		Props.Sign(f, wall(mn, mx, "W", 0.5, 8), "DANGER - HIGH VOLTAGE", 6, Color3.fromRGB(170, 140, 20), Color3.fromRGB(20, 20, 20))
-		Props.Scratches(f, wall(mn, mx, "S", 0.25, 4), 4, rng)
-		Props.Puddle(f, (at(mn, mx, 0.55, 0.6)).Position, Vector2.new(4, 6), Color3.fromRGB(20, 18, 16))
-		-- fuse box on the north wall
-		anchors.FuseBox = wall(mn, mx, "N", 0.72, 5, 0.6)
-		anchors.GeneratorHum = CFrame.new((at(mn, mx, 0.32, 0.4)).Position + Vector3.new(0, 3, 0))
-	end
-
-	---------------------------------------------------------------------------------------
-	-- SECURITY OFFICE (basement key)
-	---------------------------------------------------------------------------------------
-	do
-		local f = folder("Security")
-		local mn, mx = map:Bounds("Security")
-		-- CCTV wall
-		for _, y in { 2.05, 4.15 } do
-			Props.Part(f, Vector3.new(9, 0.25, 2.2), wall(mn, mx, "E", 0.33, y, 1.3), Color3.fromRGB(50, 52, 56), Enum.Material.Metal)
-		end
-		local feeds = { "CAM 01  RECEPTION", "CAM 02  E. CORRIDOR", "CAM 03  WARD C", "CAM 04  B1 CORRIDOR", "NO SIGNAL", "CAM 06  TUNNEL" }
-		for i, label in feeds do
-			local row = (i - 1) // 3
-			local col = (i - 1) % 3
-			local cf = wall(mn, mx, "E", 0.2 + col * 0.13, 0, 1.2) * CFrame.new(0, 2.18 + row * 2.1, 0)
-			Props.Monitor(f, cf, label .. "\n02:13:" .. string.format("%02d", 10 + i * 7), true)
-		end
-		local desk = against(mn, mx, "E", 0.33, 3.6)
-		Props.Desk(f, desk, Color3.fromRGB(60, 62, 66))
-		anchors.SecurityDesk = desk * CFrame.new(-1.6, 3.27, 0.3)
-		Props.Chair(f, desk * CFrame.new(0.5, 0, -2.4) * A(0, 20, 0), true)
-		Props.Locker(f, against(mn, mx, "W", 0.75, 1.2))
-		Props.Locker(f, against(mn, mx, "W", 0.85, 1.2), true)
-		Props.FilingCabinet(f, against(mn, mx, "S", 0.8, 1.3))
-		Props.BloodPool(f, (at(mn, mx, 0.5, 0.6)).Position, 2.2, rng)
-		Props.BloodSmear(f, wall(mn, mx, "W", 0.45, 4), Vector2.new(4, 4), rng, true)
-		Props.Papers(f, (at(mn, mx, 0.4, 0.4)).Position, 3, 10, rng)
-		Props.Sign(f, wall(mn, mx, "S", 0.4, 8.5), "SECURITY - STAFF ONLY", 6)
-		-- Key hook board
-		local board = wall(mn, mx, "N", 0.7, 5.2, 0.15)
-		Props.Part(f, Vector3.new(3, 2, 0.2), board, Color3.fromRGB(80, 60, 40), Enum.Material.Wood)
-		for i = 0, 4 do
-			Props.Part(f, Vector3.new(0.1, 0.1, 0.4), board * CFrame.new(-1.2 + i * 0.6, 0.3, -0.25), Color3.fromRGB(160, 160, 150), Enum.Material.Metal, {
-				CanCollide = false,
-			})
-		end
-		anchors.KeyHook = board * CFrame.new(0, 0.05, -0.38)
-		anchors.SecurityInside = CFrame.new(lerp(mn.X, mx.X, 0.5), mn.Y + 3, lerp(mn.Z, mx.Z, 0.5))
-	end
-
-	---------------------------------------------------------------------------------------
-	-- BREAK ROOM (SAFE ROOM)
-	---------------------------------------------------------------------------------------
-	do
-		local f = folder("SafeRoom")
-		local mn, mx = map:Bounds("SafeRoom")
-		Props.Sofa(f, against(mn, mx, "S", 0.4, 1.8))
-		Props.Table(f, at(mn, mx, 0.4, 0.55))
-		Props.Chair(f, at(mn, mx, 0.25, 0.5, 90))
-		Props.Chair(f, at(mn, mx, 0.55, 0.45, -100))
-		Props.VendingMachine(f, against(mn, mx, "E", 0.3, 1.6))
-		Props.Locker(f, against(mn, mx, "W", 0.3, 1.2))
-		Props.Locker(f, against(mn, mx, "W", 0.42, 1.2))
-		-- rug
-		Props.Part(f, Vector3.new(10, 0.06, 7), at(mn, mx, 0.42, 0.55) * CFrame.new(0, 0.03, 0), Color3.fromRGB(110, 40, 36), Enum.Material.Fabric, {
-			CanCollide = false,
-		})
-		-- staff's message: the door is the one thing it can't get through
-		local _, gui = Props.WallCanvas(f, wall(mn, mx, "W", 0.75, 5.5), Vector2.new(8, 3))
-		local label = Instance.new("TextLabel")
-		label.BackgroundTransparency = 1
-		label.Size = UDim2.fromScale(1, 1)
-		label.Font = Enum.Font.PermanentMarker
-		label.TextScaled = true
-		label.TextColor3 = Color3.fromRGB(30, 30, 30)
-		label.Text = "STEEL DOOR. IT CAN'T GET IN.\nSTAY QUIET. WAIT FOR IT TO LEAVE."
-		label.Parent = gui
-		anchors.SafeRoomInside = CFrame.new(lerp(mn.X, mx.X, 0.5), mn.Y + 3, lerp(mn.Z, mx.Z, 0.6))
-		anchors.SafeNote = wall(mn, mx, "E", 0.8, 4.5, 0.1)
-	end
-
-	---------------------------------------------------------------------------------------
-	-- PATIENT WARD
-	---------------------------------------------------------------------------------------
-	do
-		local f = folder("Ward")
-		local mn, mx = map:Bounds("Ward")
-		for i = 0, 2 do
-			local z = lerp(mn.Z, mx.Z, 0.22 + i * 0.28)
-			Props.Bed(f, CFrame.new(mn.X + 4.5, mn.Y, z) * A(0, 90, 0), i == 1, true)
-			Props.Bed(f, CFrame.new(mx.X - 4.5, mn.Y, z) * A(0, -90, 0), i == 2, i ~= 0)
-			Props.IVStand(f, CFrame.new(mn.X + 2, mn.Y, z + 3))
-			Props.Curtain(f, CFrame.new(mn.X + 5, mn.Y, z + 4.6), 8, i == 1)
-			Props.Curtain(f, CFrame.new(mx.X - 5, mn.Y, z + 4.6), 8, i ~= 1)
-		end
-		Props.Table(f, at(mn, mx, 0.5, 0.9), 4, 2.5)
-		anchors.Radio = at(mn, mx, 0.5, 0.9) * CFrame.new(0, 3.13, 0)
-		Props.BloodWriting(f, wall(mn, mx, "S", 0.5, 8), "HE SMILES WHEN HE SEES YOU", 11, rng)
-		for i = 1, 5 do
-			Props.Scratches(f, wall(mn, mx, i % 2 == 0 and "W" or "E", rng:NextNumber(0.15, 0.85), rng:NextNumber(2, 6)), 3.5, rng)
-		end
-		Props.BloodPool(f, (at(mn, mx, 0.5, 0.2)).Position, 1.8, rng)
-		Props.FogEmitter(f, CFrame.new((mn + mx) / 2 + Vector3.new(0, 1 - (mx.Y - mn.Y) / 2, 0)), Vector3.new(26, 2, 36), 3)
-	end
-
-	---------------------------------------------------------------------------------------
-	-- SOUTH CORRIDOR (first part of the final chase)
-	---------------------------------------------------------------------------------------
-	do
-		local f = folder("SouthHall")
-		local mn, mx = map:Bounds("SouthHall", 1)
-		Props.FallenPanel(f, CFrame.new(mn.X + 2.2, mn.Y, lerp(mn.Z, mx.Z, 0.35)))
-		Props.Debris(f, CFrame.new(mx.X - 2.5, mn.Y, lerp(mn.Z, mx.Z, 0.62)), rng, 0.6)
-		Props.Wheelchair(f, CFrame.new(mn.X + 2.5, mn.Y, lerp(mn.Z, mx.Z, 0.85)) * A(0, 60, 0))
-		Props.BloodWriting(f, wall(mn, mx, "E", 0.9, 7), "RUN", 6, rng)
-		Props.Scratches(f, wall(mn, mx, "W", 0.5, 4), 4, rng)
-		local emn, emx = map:Bounds("SouthHall", 2)
-		Props.Cart(f, CFrame.new(lerp(emn.X, emx.X, 0.4), emn.Y, emn.Z + 2) * A(0, 10, 0), rng)
-		Props.Chain(f, Vector3.new(lerp(emn.X, emx.X, 0.7), emn.Y + 14, (emn.Z + emx.Z) / 2), 6)
-		Props.Sign(f, wall(emn, emx, "S", 0.9, 9), "STAIRS B1 ->", 4)
-		Props.FogEmitter(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 1, (mn.Z + mx.Z) / 2), Vector3.new(8, 2, mx.Z - mn.Z), 4)
+		Props.Dust(f, CFrame.new((mn + mx) / 2 + Vector3.new(0, 5, 0)), Vector3.new(26, 10, 26))
+		-- key B sits on a small table in the open, lit by its own glint
+		local stand = at(mn, mx, 0.5, 0.82, 0)
+		Props.Table(f, stand, 3, 2)
+		anchors.ExitKey = stand * CFrame.new(0, 3.13, 0)
+		scratches(f, wall(mn, mx, "E", 0.4, 4), 4)
 	end
 
 	---------------------------------------------------------------------------------------
@@ -340,95 +306,41 @@ function Decorator.Decorate(map)
 	do
 		local f = folder("Records")
 		local mn, mx = map:Bounds("Records")
-		for i = 0, 2 do
-			Props.Shelf(f, at(mn, mx, 0.3 + i * 0.25, 0.35, 90), rng, 9)
+		for i = 0, 1 do
+			Props.Shelf(f, at(mn, mx, 0.3 + i * 0.4, 0.3, 0), rng, 8)
 		end
-		Props.FilingCabinet(f, against(mn, mx, "S", 0.2, 1.3))
-		Props.FilingCabinet(f, against(mn, mx, "S", 0.32, 1.3), true)
-		Props.FilingCabinet(f, against(mn, mx, "S", 0.44, 1.3))
-		Props.Desk(f, against(mn, mx, "N", 0.2, 2.2))
-		Props.Papers(f, (at(mn, mx, 0.5, 0.75)).Position, 6, 30, rng)
-		anchors.RecordsDesk = against(mn, mx, "N", 0.2, 2.2) * CFrame.new(-1.5, 3.27, 0)
-		Props.BloodWriting(f, wall(mn, mx, "E", 0.7, 6), "SUBJECT 09 IS NOT A PATIENT", 10, rng)
-		Props.Dust(f, CFrame.new((mn + mx) / 2 + Vector3.new(0, 5, 0)), Vector3.new(26, 10, 36))
+		Props.FilingCabinet(f, against(mn, mx, "E", 0.5, 1.3))
+		Props.FilingCabinet(f, against(mn, mx, "E", 0.62, 1.3), true)
+		local desk = against(mn, mx, "W", 0.65, 2.2)
+		Props.Desk(f, desk)
+		anchors.RecordsNote = desk * CFrame.new(-1.2, 3.27, 0)
+		Props.Papers(f, (at(mn, mx, 0.5, 0.7)).Position, 5, 25, rng)
+		writing(f, wall(mn, mx, "N", 0.5, 9), "PATIENT 12 NEVER LEFT", 10)
 	end
 
 	---------------------------------------------------------------------------------------
-	-- BASEMENT
+	-- THERAPY ROOM (the girl's room: dolls, drawings, music box)
 	---------------------------------------------------------------------------------------
 	do
-		local f = folder("Basement")
-		local mn, mx = map:Bounds("Corridor")
-		local top = mn.Y + 13
-		-- pipe runs along both walls with steam leaks
-		for _, z in { mn.Z + 0.8, mx.Z - 0.8 } do
-			Props.Pipe(f, Vector3.new(mn.X - 4, top - 0.5, z), Vector3.new(mx.X + 14, top - 0.5, z), 0.6)
-			Props.Pipe(f, Vector3.new(mn.X - 4, top - 2, z), Vector3.new(mx.X + 14, top - 2, z), 0.35, Color3.fromRGB(70, 80, 90))
+		local f = folder("Therapy")
+		local mn, mx = map:Bounds("Therapy")
+		local center = at(mn, mx, 0.5, 0.5)
+		for i = 0, 5 do
+			local angle = i / 6 * 360
+			local cf = center * A(0, angle, 0) * CFrame.new(0, 0, -7) * A(0, 180, 0)
+			Props.Chair(f, cf, i == 4)
+			if i ~= 4 then
+				Props.Doll(f, cf * CFrame.new(0, 2.05, 0.2))
+			end
 		end
-		for i = 1, 4 do
-			Props.Steam(f, Vector3.new(lerp(mn.X, mx.X, i / 5), top - 0.5, mn.Z + 1.4), Vector3.new(0, -0.6, 1).Unit)
+		Props.Table(f, center, 3, 3)
+		anchors.MusicBox = center * CFrame.new(0, 3.13, 0)
+		Props.RockingHorse(f, at(mn, mx, 0.15, 0.25, 30))
+		Props.Doll(f, at(mn, mx, 0.85, 0.2, 200))
+		for i, caption in { "MY ROOM", "DONT LOOK AWAY", "PLAY WITH ME", "BEHIND YOU" } do
+			drawing(f, wall(mn, mx, i <= 2 and "W" or "E", i % 2 == 0 and 0.3 or 0.7, 5), caption)
 		end
-		-- obstacles you have to weave around during the final chase
-		Props.Debris(f, CFrame.new(lerp(mn.X, mx.X, 0.78), mn.Y, mn.Z + 2.5), rng, 0.7)
-		Props.Crate(f, CFrame.new(lerp(mn.X, mx.X, 0.6), mn.Y, mx.Z - 2) * A(0, 20, 0), 3)
-		Props.Barrel(f, CFrame.new(lerp(mn.X, mx.X, 0.42), mn.Y, mn.Z + 2), nil, true)
-		Props.Debris(f, CFrame.new(lerp(mn.X, mx.X, 0.25), mn.Y, mx.Z - 2.6), rng, 0.6)
-		Props.Chain(f, Vector3.new(lerp(mn.X, mx.X, 0.5), top + 1, (mn.Z + mx.Z) / 2), 6)
-		Props.Chain(f, Vector3.new(lerp(mn.X, mx.X, 0.15), top + 1, (mn.Z + mx.Z) / 2 + 1), 8)
-		for i = 0, 4 do
-			Props.Puddle(f, Vector3.new(lerp(mn.X, mx.X, 0.1 + i * 0.2), mn.Y, (mn.Z + mx.Z) / 2 + rng:NextNumber(-2, 2)), Vector2.new(rng:NextNumber(3, 6), rng:NextNumber(2, 4)))
-		end
-		Props.BloodWriting(f, wall(mn, mx, "N", 0.6, 6), "IT CAME FROM DOWN HERE", 10, rng)
-		Props.DragMarks(f, Vector3.new(mx.X - 4, mn.Y, (mn.Z + mx.Z) / 2), Vector3.new(lerp(mn.X, mx.X, 0.35), mn.Y, (mn.Z + mx.Z) / 2))
-		Props.Sign(f, wall(mn, mx, "S", 0.06, 8.5), "<- MAINTENANCE TUNNEL / RIVER OUTFLOW", 8, Color3.fromRGB(150, 120, 20), Color3.fromRGB(20, 20, 20))
-		Props.FogEmitter(f, CFrame.new((mn.X + mx.X) / 2, mn.Y + 1, (mn.Z + mx.Z) / 2), Vector3.new(mx.X - mn.X, 2, 8), 6)
-		anchors.BasementCorridor = CFrame.new((mn.X + mx.X) / 2, mn.Y + 3, (mn.Z + mx.Z) / 2)
-
-		-- Tunnel
-		local tmn, tmx = map:Bounds("Tunnel")
-		for i = 0, 6 do
-			Props.Puddle(f, Vector3.new((tmn.X + tmx.X) / 2 + rng:NextNumber(-2, 2), tmn.Y, lerp(tmn.Z, tmx.Z, i / 6)), Vector2.new(rng:NextNumber(3, 5), rng:NextNumber(4, 7)))
-		end
-		Props.Pipe(f, Vector3.new(tmn.X + 0.8, tmn.Y + 11, tmn.Z - 10), Vector3.new(tmn.X + 0.8, tmn.Y + 11, tmx.Z + 6), 0.7)
-		for i = 1, 3 do
-			Props.Debris(f, CFrame.new(i % 2 == 0 and tmn.X + 2.4 or tmx.X - 2.4, tmn.Y, lerp(tmn.Z, tmx.Z, i / 4)), rng, 0.55)
-		end
-		Props.Sign(f, wall(tmn, tmx, "E", 0.1, 7), "OUTFLOW ->", 4, Color3.fromRGB(150, 120, 20), Color3.fromRGB(20, 20, 20))
-		Props.BloodSmear(f, wall(tmn, tmx, "W", 0.35, 3), Vector2.new(4, 4), rng, true)
-		Props.FogEmitter(f, CFrame.new((tmn.X + tmx.X) / 2, tmn.Y + 1, (tmn.Z + tmx.Z) / 2), Vector3.new(8, 2, tmx.Z - tmn.Z), 6)
-		anchors.TunnelEnd = CFrame.new((tmn.X + tmx.X) / 2, tmn.Y, tmn.Z + 4)
-
-		-- Boiler room
-		local bmn, bmx = map:Bounds("Boiler")
-		Props.Boiler(f, at(bmn, bmx, 0.35, 0.5))
-		Props.Boiler(f, at(bmn, bmx, 0.7, 0.55))
-		Props.Steam(f, (at(bmn, bmx, 0.5, 0.3)).Position + Vector3.new(0, 9, 0), Vector3.new(0.3, -1, 0).Unit)
-		Props.Scratches(f, wall(bmn, bmx, "S", 0.5, 4), 5, rng)
-		anchors.BoilerRoom = CFrame.new((bmn + bmx) / 2)
-
-		-- Flooded storage
-		local fmn, fmx = map:Bounds("Flooded")
-		Props.Part(f, Vector3.new(fmx.X - fmn.X, 0.8, fmx.Z - fmn.Z), CFrame.new((fmn.X + fmx.X) / 2, fmn.Y + 0.4, (fmn.Z + fmx.Z) / 2), Color3.fromRGB(22, 30, 30), Enum.Material.Glass, {
-			Transparency = 0.2,
-			Reflectance = 0.2,
-			CanCollide = false,
-			CanQuery = false,
-		})
-		for _ = 1, 5 do
-			Props.Crate(f, at(fmn, fmx, rng:NextNumber(0.15, 0.85), rng:NextNumber(0.15, 0.7), rng:NextNumber(0, 90)), rng:NextNumber(2.5, 3.5))
-		end
-		Props.Barrel(f, at(fmn, fmx, 0.8, 0.8), nil, true)
-		Props.BloodWriting(f, wall(fmn, fmx, "N", 0.5, 7), "WE SHOULD NEVER HAVE WOKEN IT", 11, rng)
-
-		-- Pump room
-		local pmn, pmx = map:Bounds("Pump")
-		for i = 0, 1 do
-			Props.Part(f, Vector3.new(6, 4, 4), at(pmn, pmx, 0.35 + i * 0.35, 0.4) * CFrame.new(0, 3, 0) * A(0, 0, 90), Color3.fromRGB(60, 80, 100), Enum.Material.Metal, {
-				Shape = Enum.PartType.Cylinder,
-			})
-			Props.Pipe(f, (at(pmn, pmx, 0.35 + i * 0.35, 0.4)).Position + Vector3.new(0, 6, 0), (at(pmn, pmx, 0.35 + i * 0.35, 0.4)).Position + Vector3.new(0, 14, 0), 0.6)
-		end
-		Props.Sign(f, wall(pmn, pmx, "N", 0.5, 8), "PUMP STATION 2", 5, Color3.fromRGB(150, 120, 20), Color3.fromRGB(20, 20, 20))
+		writing(f, wall(mn, mx, "E", 0.5, 9.5), "SHE WANTS TO PLAY", 9)
 	end
 
 	return anchors

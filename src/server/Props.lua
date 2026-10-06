@@ -534,6 +534,40 @@ function Props.Cart(parent: Instance, cf: CFrame, rng: Random)
 	return m
 end
 
+-- Porcelain doll in a little white dress (sits on chairs in the therapy room).
+function Props.Doll(parent: Instance, cf: CFrame)
+	local m = model(parent, "Doll")
+	local skin = Color3.fromRGB(226, 218, 206)
+	flat(m, Vector3.new(0.8, 0.9, 0.6), cf * CFrame.new(0, 0.45, 0), Color3.fromRGB(220, 216, 204), Enum.Material.Fabric)
+	flat(m, Vector3.new(0.6, 0.6, 0.6), cf * CFrame.new(0, 1.2, 0), skin, Enum.Material.SmoothPlastic).Shape = Enum.PartType.Ball
+	flat(m, Vector3.new(0.66, 0.5, 0.66), cf * CFrame.new(0, 1.35, 0.06), Color3.fromRGB(20, 16, 14), Enum.Material.Fabric)
+	for _, x in { -0.12, 0.12 } do
+		flat(m, Vector3.new(0.1, 0.1, 0.05), cf * CFrame.new(x, 1.22, -0.29), Color3.new(0, 0, 0), Enum.Material.SmoothPlastic)
+	end
+	flat(m, Vector3.new(0.18, 0.03, 0.04), cf * CFrame.new(0, 1.07, -0.29), Color3.fromRGB(120, 10, 10), Enum.Material.SmoothPlastic)
+	for _, x in { -0.45, 0.45 } do
+		flat(m, Vector3.new(0.15, 0.6, 0.15), cf * CFrame.new(x, 0.55, -0.1) * A(-30, 0, 0), skin, Enum.Material.SmoothPlastic)
+		flat(m, Vector3.new(0.17, 0.17, 0.6), cf * CFrame.new(x * 0.5, 0.1, -0.35), skin, Enum.Material.SmoothPlastic)
+	end
+	return m
+end
+
+function Props.RockingHorse(parent: Instance, cf: CFrame)
+	local m = model(parent, "RockingHorse")
+	local wood = Color3.fromRGB(150, 110, 70)
+	for _, x in { -0.6, 0.6 } do
+		Props.Part(m, Vector3.new(0.2, 0.3, 4.4), cf * CFrame.new(x, 0.3, 0), Color3.fromRGB(110, 40, 30), Enum.Material.Wood)
+	end
+	Props.Part(m, Vector3.new(1, 1, 2.6), cf * CFrame.new(0, 1.9, 0), wood, Enum.Material.Wood)
+	Props.Part(m, Vector3.new(0.7, 1.2, 1.2), cf * CFrame.new(0, 2.8, -1.3) * A(-25, 0, 0), wood, Enum.Material.Wood)
+	for _, x in { -0.35, 0.35 } do
+		for _, z in { -0.9, 0.9 } do
+			Props.Part(m, Vector3.new(0.25, 1.4, 0.25), cf * CFrame.new(x, 0.95, z), wood, Enum.Material.Wood)
+		end
+	end
+	return m
+end
+
 -- Collapsed debris pile (rubble + bent pipe), used as chase obstacles.
 function Props.Debris(parent: Instance, cf: CFrame, rng: Random, scale: number?)
 	local s = scale or 1

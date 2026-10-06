@@ -6,14 +6,11 @@
 
 	  id        -> PUT YOUR OWN AUDIO ASSET HERE ("rbxassetid://123456").
 	               Leave "" to use the fallback.
-	  fallback  -> A sound that ships with every Roblox client (rbxasset://sounds/...).
-	               These are reshaped with pitch + effects so the game is playable and
-	               atmospheric out of the box, but real horror assets will sound far better.
+	  fallback  -> A sound that ships with every Roblox client (rbxasset://sounds/...),
+	               reshaped with pitch + effects so the game works out of the box.
 	  volume, pitch, looped
 	  min/max   -> 3D roll-off distances (only used when the sound is parented to a part)
 	  effects   -> { ClassName = { Property = value } } SoundEffects created as children
-
-	Recommended replacements are described in README.md ("Audio").
 ]]
 
 export type SoundDef = {
@@ -28,13 +25,13 @@ export type SoundDef = {
 }
 
 local BUILTIN = {
-	Falling = "rbxasset://sounds/action_falling.mp3", -- airy whoosh loop: pitched down = drones/breath
+	Falling = "rbxasset://sounds/action_falling.mp3",
 	Footsteps = "rbxasset://sounds/action_footsteps_plastic.mp3",
-	JumpLand = "rbxasset://sounds/action_jump_land.mp3", -- dull thud: heartbeats, heavy steps
-	GetUp = "rbxasset://sounds/action_get_up.mp3", -- rustle: pitched down = creaks
+	JumpLand = "rbxasset://sounds/action_jump_land.mp3",
+	GetUp = "rbxasset://sounds/action_get_up.mp3",
 	Swim = "rbxasset://sounds/action_swim.mp3",
 	Water = "rbxasset://sounds/impact_water.mp3",
-	Uuhhh = "rbxasset://sounds/uuhhh.mp3", -- vocal: pitched down + distorted = screams
+	Uuhhh = "rbxasset://sounds/uuhhh.mp3",
 	Ping = "rbxasset://sounds/electronicpingshort.wav",
 	Swoosh = "rbxasset://sounds/swoosh.wav",
 	Button = "rbxasset://sounds/button.wav",
@@ -57,6 +54,14 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 				ReverbSoundEffect = { DecayTime = 6, WetLevel = 0, DryLevel = -6 },
 			},
 		},
+		OfficeHum = {
+			id = "",
+			fallback = BUILTIN.Falling,
+			volume = 0.35,
+			pitch = 0.1,
+			looped = true,
+			effects = { TremoloSoundEffect = { Depth = 0.3, Frequency = 14, Duty = 0.5 } },
+		},
 		Wind = {
 			id = "",
 			fallback = BUILTIN.Falling,
@@ -65,53 +70,9 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 			looped = true,
 			effects = { EqualizerSoundEffect = { LowGain = 2, MidGain = -6, HighGain = -18 } },
 		},
-		Rain = {
-			id = "",
-			fallback = BUILTIN.Falling,
-			volume = 0.12,
-			pitch = 1.6,
-			looped = true,
-			min = 8,
-			max = 60,
-			effects = { EqualizerSoundEffect = { LowGain = -20, MidGain = -3, HighGain = 2 } },
-		},
-		GeneratorHum = {
-			id = "",
-			fallback = BUILTIN.Falling,
-			volume = 0.7,
-			pitch = 0.09,
-			looped = true,
-			min = 6,
-			max = 70,
-			effects = { TremoloSoundEffect = { Depth = 0.35, Frequency = 12, Duty = 0.5 } },
-		},
-		LightBuzz = {
-			id = "",
-			fallback = BUILTIN.Ping,
-			volume = 0.05,
-			pitch = 0.22,
-			looped = true,
-			min = 3,
-			max = 18,
-		},
-		DistantBang = {
-			id = "",
-			fallback = BUILTIN.Hit,
-			volume = 0.6,
-			pitch = 0.32,
-			min = 20,
-			max = 260,
-			effects = REVERB_BIG,
-		},
-		MetalCreak = {
-			id = "",
-			fallback = BUILTIN.GetUp,
-			volume = 0.7,
-			pitch = 0.3,
-			min = 15,
-			max = 200,
-			effects = REVERB_BIG,
-		},
+		LightBuzz = { id = "", fallback = BUILTIN.Ping, volume = 0.05, pitch = 0.22, looped = true, min = 3, max = 18 },
+		DistantBang = { id = "", fallback = BUILTIN.Hit, volume = 0.6, pitch = 0.32, min = 20, max = 260, effects = REVERB_BIG },
+		MetalCreak = { id = "", fallback = BUILTIN.GetUp, volume = 0.7, pitch = 0.3, min = 15, max = 200, effects = REVERB_BIG },
 		Whisper = {
 			id = "",
 			fallback = BUILTIN.Swim,
@@ -120,6 +81,18 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 			min = 6,
 			max = 80,
 			effects = { ReverbSoundEffect = { DecayTime = 3, WetLevel = 0, DryLevel = -10 } },
+		},
+		Giggle = {
+			id = "",
+			fallback = BUILTIN.Uuhhh,
+			volume = 0.45,
+			pitch = 2.3,
+			min = 10,
+			max = 120,
+			effects = {
+				TremoloSoundEffect = { Depth = 0.8, Frequency = 9, Duty = 0.5 },
+				ReverbSoundEffect = { DecayTime = 3.5, WetLevel = 0, DryLevel = -4 },
+			},
 		},
 		FootstepsAbove = {
 			id = "",
@@ -130,15 +103,7 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 			max = 200,
 			effects = { EqualizerSoundEffect = { LowGain = 6, MidGain = -6, HighGain = -25 } },
 		},
-		Drip = {
-			id = "",
-			fallback = BUILTIN.Water,
-			volume = 0.25,
-			pitch = 2.2,
-			min = 4,
-			max = 50,
-			effects = { ReverbSoundEffect = { DecayTime = 2.5, WetLevel = -2 } },
-		},
+		Drip = { id = "", fallback = BUILTIN.Water, volume = 0.25, pitch = 2.2, min = 4, max = 50, effects = { ReverbSoundEffect = { DecayTime = 2.5, WetLevel = -2 } } },
 		Thunder = {
 			id = "",
 			fallback = BUILTIN.Falling,
@@ -149,32 +114,16 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 				DistortionSoundEffect = { Level = 0.35 },
 			},
 		},
-		PowerOn = {
-			id = "",
-			fallback = BUILTIN.Hit,
-			volume = 1.4,
-			pitch = 0.22,
-			effects = REVERB_BIG,
-		},
-		Static = {
-			id = "",
-			fallback = BUILTIN.Falling,
-			volume = 0.5,
-			pitch = 3.2,
-			looped = true,
-			min = 4,
-			max = 40,
-			effects = { DistortionSoundEffect = { Level = 0.85 } },
-		},
-		PhoneRing = {
+		PowerDown = { id = "", fallback = BUILTIN.Hit, volume = 1.4, pitch = 0.22, effects = REVERB_BIG },
+		MusicBox = {
 			id = "",
 			fallback = BUILTIN.Ping,
-			volume = 0.9,
-			pitch = 0.75,
+			volume = 0.5,
+			pitch = 1.6,
 			looped = true,
-			min = 8,
-			max = 140,
-			effects = { TremoloSoundEffect = { Depth = 1, Frequency = 22, Duty = 0.5 } },
+			min = 5,
+			max = 60,
+			effects = { TremoloSoundEffect = { Depth = 1, Frequency = 3, Duty = 0.35 }, ReverbSoundEffect = { DecayTime = 3, WetLevel = 0 } },
 		},
 	},
 
@@ -202,10 +151,10 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 				EqualizerSoundEffect = { LowGain = 4, MidGain = 0, HighGain = -20 },
 			},
 		},
-		ChaseLoop = {
+		Pulse = {
 			id = "",
 			fallback = BUILTIN.Footsteps,
-			volume = 0.9,
+			volume = 0.8,
 			pitch = 0.42,
 			looped = true,
 			effects = {
@@ -213,107 +162,59 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 				EqualizerSoundEffect = { LowGain = 9, MidGain = 2, HighGain = -10 },
 			},
 		},
-		ChaseDrone = {
-			id = "",
-			fallback = BUILTIN.Falling,
-			volume = 0.7,
-			pitch = 0.33,
-			looped = true,
-			effects = {
-				TremoloSoundEffect = { Depth = 0.8, Frequency = 9, Duty = 0.4 },
-				DistortionSoundEffect = { Level = 0.4 },
-			},
-		},
 		Stinger = {
 			id = "",
 			fallback = BUILTIN.Hit,
 			volume = 1.6,
 			pitch = 0.2,
-			effects = {
-				DistortionSoundEffect = { Level = 0.7 },
-				ReverbSoundEffect = { DecayTime = 6, WetLevel = 0 },
-			},
+			effects = { DistortionSoundEffect = { Level = 0.7 }, ReverbSoundEffect = { DecayTime = 6, WetLevel = 0 } },
 		},
-		Victory = {
+		Ending = {
 			id = "",
 			fallback = BUILTIN.Falling,
 			volume = 0.4,
-			pitch = 0.6,
+			pitch = 0.2,
 			looped = true,
-			effects = { ChorusSoundEffect = { Depth = 0.5, Mix = 0.7, Rate = 0.2 } },
+			effects = { ChorusSoundEffect = { Depth = 0.5, Mix = 0.7, Rate = 0.2 }, ReverbSoundEffect = { DecayTime = 8, WetLevel = 0 } },
 		},
 	},
 
+	-- The Girl in White
 	Monster = {
-		Footstep = {
+		Stomp = {
 			id = "",
 			fallback = BUILTIN.JumpLand,
-			volume = 1.4,
-			pitch = 0.5,
-			min = 6,
-			max = 140,
-			effects = { EqualizerSoundEffect = { LowGain = 8, MidGain = 0, HighGain = -8 } },
+			volume = 3,
+			pitch = 0.36,
+			min = 8,
+			max = 220,
+			effects = {
+				EqualizerSoundEffect = { LowGain = 10, MidGain = 2, HighGain = -6 },
+				DistortionSoundEffect = { Level = 0.25 },
+				ReverbSoundEffect = { DecayTime = 2.2, WetLevel = -3 },
+			},
 		},
 		Breath = {
 			id = "",
 			fallback = BUILTIN.Falling,
-			volume = 0.9,
-			pitch = 0.32,
+			volume = 0.6,
+			pitch = 0.55,
 			looped = true,
 			min = 4,
-			max = 45,
-			effects = { TremoloSoundEffect = { Depth = 0.9, Frequency = 1.4, Duty = 0.55 } },
+			max = 30,
+			effects = { TremoloSoundEffect = { Depth = 0.9, Frequency = 1.2, Duty = 0.55 } },
 		},
 		Scream = {
 			id = "",
 			fallback = BUILTIN.Uuhhh,
 			volume = 3,
-			pitch = 0.42,
-			min = 30,
-			max = 400,
+			pitch = 1.45,
+			min = 20,
+			max = 300,
 			effects = {
-				DistortionSoundEffect = { Level = 0.8 },
-				PitchShiftSoundEffect = { Octave = 0.85 },
-				ReverbSoundEffect = { DecayTime = 3.5, WetLevel = -2 },
+				DistortionSoundEffect = { Level = 0.85 },
+				ReverbSoundEffect = { DecayTime = 3, WetLevel = -2 },
 			},
-		},
-		Growl = {
-			id = "",
-			fallback = BUILTIN.Uuhhh,
-			volume = 1.6,
-			pitch = 0.24,
-			min = 8,
-			max = 90,
-			effects = { DistortionSoundEffect = { Level = 0.6 } },
-		},
-		Chatter = {
-			id = "",
-			fallback = BUILTIN.Click,
-			volume = 0.8,
-			pitch = 0.55,
-			min = 5,
-			max = 50,
-		},
-		Slam = {
-			id = "",
-			fallback = BUILTIN.Hit,
-			volume = 2.6,
-			pitch = 0.36,
-			min = 15,
-			max = 260,
-			effects = {
-				EqualizerSoundEffect = { LowGain = 10, MidGain = 2, HighGain = -6 },
-				ReverbSoundEffect = { DecayTime = 2.5, WetLevel = -3 },
-			},
-		},
-		DoorSmash = {
-			id = "",
-			fallback = BUILTIN.Hit,
-			volume = 2.4,
-			pitch = 0.55,
-			min = 12,
-			max = 220,
-			effects = { DistortionSoundEffect = { Level = 0.4 }, ReverbSoundEffect = { DecayTime = 2, WetLevel = -4 } },
 		},
 	},
 
@@ -336,12 +237,7 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 				EqualizerSoundEffect = { LowGain = -8, MidGain = 2, HighGain = -6 },
 			},
 		},
-		Gasp = {
-			id = "",
-			fallback = BUILTIN.Uuhhh,
-			volume = 0.7,
-			pitch = 1.45,
-		},
+		Gasp = { id = "", fallback = BUILTIN.Uuhhh, volume = 0.7, pitch = 1.45 },
 		Pickup = { id = "", fallback = BUILTIN.Swoosh, volume = 0.6, pitch = 1.25 },
 		Paper = { id = "", fallback = BUILTIN.Swoosh, volume = 0.5, pitch = 1.8 },
 		Flashlight = { id = "", fallback = BUILTIN.Click, volume = 0.5, pitch = 1.3 },
@@ -356,29 +252,14 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 		},
 		DoorClose = { id = "", fallback = BUILTIN.Hit, volume = 0.9, pitch = 0.75, min = 6, max = 90 },
 		DoorLocked = { id = "", fallback = BUILTIN.Button, volume = 0.8, pitch = 0.5, min = 4, max = 40 },
-		FuseInsert = { id = "", fallback = BUILTIN.Hit, volume = 1, pitch = 1.4, min = 5, max = 50 },
-		Lever = { id = "", fallback = BUILTIN.Hit, volume = 1.2, pitch = 0.9, min = 5, max = 60 },
+		Unlock = { id = "", fallback = BUILTIN.Click, volume = 1, pitch = 0.7, min = 4, max = 40 },
 		KeyJingle = { id = "", fallback = BUILTIN.Click, volume = 0.8, pitch = 1.6 },
-		Drawer = { id = "", fallback = BUILTIN.GetUp, volume = 0.7, pitch = 0.9, min = 4, max = 40 },
 	},
 
 	UI = {
 		Hover = { id = "", fallback = BUILTIN.Button, volume = 0.18, pitch = 1.7 },
-		Click = {
-			id = "",
-			fallback = BUILTIN.Button,
-			volume = 0.5,
-			pitch = 0.75,
-			effects = { ReverbSoundEffect = { DecayTime = 1.2, WetLevel = -6 } },
-		},
-		Back = { id = "", fallback = BUILTIN.Button, volume = 0.4, pitch = 0.6 },
-		Objective = {
-			id = "",
-			fallback = BUILTIN.Ping,
-			volume = 0.45,
-			pitch = 0.45,
-			effects = { ReverbSoundEffect = { DecayTime = 3, WetLevel = 0 } },
-		},
+		Click = { id = "", fallback = BUILTIN.Button, volume = 0.5, pitch = 0.75, effects = { ReverbSoundEffect = { DecayTime = 1.2, WetLevel = -6 } } },
+		Objective = { id = "", fallback = BUILTIN.Ping, volume = 0.45, pitch = 0.45, effects = { ReverbSoundEffect = { DecayTime = 3, WetLevel = 0 } } },
 		Whoosh = { id = "", fallback = BUILTIN.Swoosh, volume = 0.5, pitch = 0.45 },
 		Slider = { id = "", fallback = BUILTIN.Click, volume = 0.15, pitch = 1.5 },
 	},
@@ -387,13 +268,19 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 		Scream = {
 			id = "",
 			fallback = BUILTIN.Uuhhh,
-			volume = 4,
-			pitch = 0.55,
+			volume = 5,
+			pitch = 1.55,
 			effects = {
 				DistortionSoundEffect = { Level = 0.95 },
-				PitchShiftSoundEffect = { Octave = 0.8 },
-				EqualizerSoundEffect = { LowGain = 6, MidGain = 6, HighGain = 4 },
+				EqualizerSoundEffect = { LowGain = 6, MidGain = 8, HighGain = 6 },
 			},
+		},
+		ScreamLow = {
+			id = "",
+			fallback = BUILTIN.Uuhhh,
+			volume = 3.5,
+			pitch = 0.75,
+			effects = { DistortionSoundEffect = { Level = 0.9 } },
 		},
 		Impact = {
 			id = "",
@@ -402,21 +289,8 @@ local Sounds: { [string]: { [string]: SoundDef } } = {
 			pitch = 0.28,
 			effects = { DistortionSoundEffect = { Level = 0.9 }, EqualizerSoundEffect = { LowGain = 10, MidGain = 0, HighGain = 0 } },
 		},
-		Static = {
-			id = "",
-			fallback = BUILTIN.Falling,
-			volume = 1.6,
-			pitch = 3.5,
-			looped = true,
-			effects = { DistortionSoundEffect = { Level = 1 } },
-		},
-		Sting = {
-			id = "",
-			fallback = BUILTIN.Ping,
-			volume = 2,
-			pitch = 0.32,
-			effects = { DistortionSoundEffect = { Level = 0.9 } },
-		},
+		Static = { id = "", fallback = BUILTIN.Falling, volume = 1.6, pitch = 3.5, looped = true, effects = { DistortionSoundEffect = { Level = 1 } } },
+		Sting = { id = "", fallback = BUILTIN.Ping, volume = 2, pitch = 0.32, effects = { DistortionSoundEffect = { Level = 0.9 } } },
 		Thud = {
 			id = "",
 			fallback = BUILTIN.JumpLand,

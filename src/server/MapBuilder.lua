@@ -52,6 +52,7 @@ local STYLES: { [string]: Style } = {
 	Boiler = { Floor = F(M.DiamondPlate, 60, 58, 56), Lower = F(M.Brick, 80, 52, 40), Upper = F(M.Concrete, 78, 76, 72), Ceiling = F(M.Concrete, 54, 52, 50), Trim = Color3.fromRGB(40, 30, 26) },
 	Flooded = { Floor = F(M.Concrete, 40, 44, 44), Lower = F(M.CorrodedMetal, 70, 64, 56), Upper = F(M.Concrete, 70, 72, 70), Ceiling = F(M.Concrete, 50, 52, 52), Trim = Color3.fromRGB(30, 30, 30) },
 	Pump = { Floor = F(M.DiamondPlate, 64, 66, 68), Lower = F(M.Metal, 60, 64, 66), Upper = F(M.Concrete, 76, 76, 74), Ceiling = F(M.Concrete, 56, 56, 56), Trim = Color3.fromRGB(150, 120, 20) },
+	Therapy = { Floor = F(M.WoodPlanks, 96, 78, 62), Lower = F(M.WoodPlanks, 120, 92, 96), Upper = F(M.Plaster, 168, 140, 146), Ceiling = F(M.Plaster, 124, 116, 112), Trim = Color3.fromRGB(70, 46, 52) },
 	Outside = { Floor = F(M.Mud, 52, 46, 36), Lower = F(M.Rock, 66, 64, 60), Upper = F(M.Rock, 70, 68, 62), Ceiling = F(M.Rock, 60, 60, 60), Trim = Color3.fromRGB(50, 50, 50) },
 }
 local EXTERIOR: Style = { Floor = F(M.Ground, 40, 40, 36), Lower = F(M.Brick, 74, 50, 42), Upper = F(M.Brick, 80, 56, 46), Ceiling = F(M.Concrete, 60, 60, 60), Trim = Color3.fromRGB(40, 36, 34) }
@@ -112,7 +113,6 @@ function MapBuilder.Build()
 		Doors = {} :: { any },
 		DoorsByType = {} :: { [string]: { any } },
 		PatrolNodes = {} :: { [string]: { Vector3 } },
-		StalkPoints = {} :: { any },
 		Rng = rng,
 	}
 
@@ -143,21 +143,15 @@ function MapBuilder.Build()
 	for floorName, floor in Layout.Floors do
 		MapBuilder._buildFloor(map, floorName, floor, folders, rng)
 	end
-	MapBuilder._buildStairs(map, folders.Structure)
 	MapBuilder._buildExterior(map, folders.Exterior, rng)
 	MapBuilder._buildMenuSet(map, folders.MenuSet, rng)
 
-	-- Patrol nodes & stalk points
+	-- Spawn / wander nodes for the Girl
 	for floorName, cells in Layout.PatrolCells do
 		map.PatrolNodes[floorName] = {}
 		for _, cell in cells do
 			table.insert(map.PatrolNodes[floorName], map:Cell(floorName, cell[1], cell[2]))
 		end
-	end
-	for _, point in Layout.StalkPoints do
-		local position = map:Cell("Ground", point.Cell[1], point.Cell[2]) + point.Offset
-		local lookAt = map:Cell("Ground", point.LookCell[1], point.LookCell[2])
-		table.insert(map.StalkPoints, { Name = point.Name, Position = position, LookAt = lookAt })
 	end
 
 	root.Parent = Workspace
@@ -315,7 +309,7 @@ function MapBuilder._lightRegion(region, parent: Instance, rng: Random)
 	end
 	local ceiling = region.Y + region.Height
 	local weights = MODE_WEIGHTS[kind] or MODE_WEIGHTS.Room
-	if kind == "Security" or kind == "Generator" or kind == "StairsTop" then
+	if kind == "Office" or kind == "Lobby" then
 		weights = MODE_WEIGHTS.Steady
 	end
 	local basement = region.Floor == "Basement"
@@ -459,16 +453,13 @@ function MapBuilder._buildWallSegment(map, parent, folders, floorInfo, x, z, nx,
 		end
 	else
 		-- Door-like openings
-		local width = edgeType == "ExitDoor" and 8 or (edgeType == "ExitGate" and 8 or DOOR_W)
+		local width = edgeType == "FinalDoor" and 8 or DOOR_W
 		local doorHeight = DOOR_H
 		panel(-half, -width / 2 - 0.45, 0, wallTop)
 		panel(width / 2 + 0.45, half, 0, wallTop)
 		panel(-width / 2 - 0.45, width / 2 + 0.45, doorHeight + 0.5, wallTop)
 		local doorCF = CFrame.lookAt(origin, origin + normal)
-		if edgeType == "ExitGate" then
-			map.ExitGateCFrame = doorCF
-			map.ExitGateWidth = width
-		else
+		do
 			local door = Doors.Create({
 				CFrame = doorCF,
 				Width = width,
@@ -500,9 +491,27 @@ function MapBuilder._buildWallSegment(map, parent, folders, floorInfo, x, z, nx,
 				local lampPos = origin + Vector3.new(along.X * 3.2, doorHeight + 1.3, along.Z * 3.2) + normal * hallSide * (T / 2 + 0.3)
 				Props.EmergencyLight(folders.Lights, CFrame.lookAt(lampPos, lampPos + normal * hallSide))
 			end
-			if edgeType == "ExitDoor" then
+			if edgeType == "FinalDoor" then
+				-- The "way out". Behind the doors is nothing but a brick wall.
 				local signPos = origin + Vector3.new(0, doorHeight + 1.8, 0) + normal * (T / 2 + 0.1)
 				Props.ExitSign(parent, CFrame.lookAt(signPos, signPos + normal))
+				local brickCF = CFrame.lookAt(origin, origin + normal) * CFrame.new(0, (doorHeight + 0.5) / 2, T / 2 + 0.35)
+				local bricks = Props.Part(parent, Vector3.new(width + 1, doorHeight + 0.5, 0.7), brickCF, Color3.fromRGB(110, 52, 40), M.Brick, {
+					Name = "BrickedExit",
+				})
+				-- mortar smears + a crude message only visible once the doors open
+				local _, gui = Props.WallCanvas(parent, brickCF * CFrame.new(0, 0, -0.37), Vector2.new(width, doorHeight))
+				local label = Instance.new("TextLabel")
+				label.BackgroundTransparency = 1
+				label.Size = UDim2.fromScale(1, 0.5)
+				label.Position = UDim2.fromScale(0, 0.25)
+				label.Font = Enum.Font.Creepster
+				label.TextScaled = true
+				label.TextColor3 = Color3.fromRGB(90, 6, 6)
+				label.Text = "BEHIND YOU"
+				label.Parent = gui
+				map.BrickedExit = bricks
+				map.FinalDoorCFrame = CFrame.lookAt(origin + Vector3.new(0, 5, 0), origin + Vector3.new(0, 5, 0) - normal)
 			end
 		end
 	end
@@ -523,132 +532,56 @@ function MapBuilder._buildWallSegment(map, parent, folders, floorInfo, x, z, nx,
 end
 
 ---------------------------------------------------------------------------------------------
--- STAIRS
----------------------------------------------------------------------------------------------
-
-function MapBuilder._buildStairs(map, parent: Instance)
-	local s = Layout.Stairs
-	local x0, x1 = s.X0 * C + T / 2, (s.X1 + 1) * C - T / 2
-	local zTop, zBottom = s.TopZ * C, s.BottomZ * C
-	local drop = s.TopY - s.BottomY
-	local steps = math.floor(drop)
-	local run = (zTop - zBottom) / steps
-	local width = x1 - x0
-	local cx = (x0 + x1) / 2
-	local folder = Instance.new("Model")
-	folder.Name = "Stairs"
-	folder.Parent = parent
-	for i = 1, steps do
-		local top = s.TopY - i
-		local h = top - s.BottomY
-		if h > 0.05 then
-			local zFront = zTop - (i - 1) * run
-			local zc = zFront - run / 2
-			Props.Part(folder, Vector3.new(width, h, run), CFrame.new(cx, s.BottomY + h / 2, zc), Color3.fromRGB(78, 78, 76), M.Concrete, {
-				Name = "Step",
-			})
-			-- yellow safety nosing
-			Props.Part(folder, Vector3.new(width, 0.08, 0.35), CFrame.new(cx, top + 0.04, zFront - 0.18), Color3.fromRGB(150, 120, 20), M.SmoothPlastic, {
-				CanCollide = false,
-			})
-		end
-	end
-	-- Invisible ramp over the steps: smooth footing for players and a clean navmesh for
-	-- the monster's pathfinding. (WedgePart: full height at +Z, zero at -Z.)
-	local ramp = Instance.new("WedgePart")
-	ramp.Name = "StairRamp"
-	ramp.Anchored = true
-	ramp.Transparency = 1
-	ramp.Size = Vector3.new(width, drop, zTop - zBottom)
-	ramp.CFrame = CFrame.new(cx, s.BottomY + drop / 2, (zTop + zBottom) / 2)
-	ramp.CastShadow = false
-	ramp.Parent = folder
-	-- handrails
-	for _, x in { x0 + 0.5, x1 - 0.5 } do
-		local from = Vector3.new(x, s.TopY + 3.2, zTop)
-		local to = Vector3.new(x, s.BottomY + 3.2, zBottom)
-		Props.Pipe(folder, from, to, 0.15, Color3.fromRGB(90, 90, 92))
-	end
-	-- landing light and painted floor number
-	Props.Sign(folder, CFrame.new(cx, s.BottomY + 7, zBottom - C + T / 2 + 0.1) * A(0, 180, 0), "B1 - SUB LEVEL", 5, Color3.fromRGB(150, 120, 20), Color3.fromRGB(20, 20, 20))
-	map.StairsTop = Vector3.new(cx, s.TopY, zTop + 4)
-	map.StairsBottom = Vector3.new(cx, s.BottomY, zBottom - 4)
-end
-
----------------------------------------------------------------------------------------------
 -- EXTERIOR: grounds around the building (seen through windows) and the riverbank exit.
 ---------------------------------------------------------------------------------------------
 
 function MapBuilder._buildExterior(map, parent: Instance, rng: Random)
-	local groundColor = Color3.fromRGB(36, 40, 30)
-	local function ground(x0: number, z0: number, x1: number, z1: number)
-		Props.Part(parent, Vector3.new(x1 - x0, 2, z1 - z0), CFrame.new((x0 + x1) / 2, -1, (z0 + z1) / 2), groundColor, M.Grass, { Name = "Ground" })
+	-- Footprint of the building (bounding box of every region), in studs.
+	local minX, minZ, maxX, maxZ = math.huge, math.huge, -math.huge, -math.huge
+	for _, region in map.RegionList do
+		for _, r in region.Rects do
+			minX = math.min(minX, r[1] * C)
+			minZ = math.min(minZ, r[2] * C)
+			maxX = math.max(maxX, (r[3] + 1) * C)
+			maxZ = math.max(maxZ, (r[4] + 1) * C)
+		end
 	end
-	-- Building footprint x[0,200] z[10,130]; ravine hole x[40,90] z[-70,-20].
-	ground(-250, -250, 0, 350)
-	ground(200, -250, 450, 350)
-	ground(0, 130, 200, 350)
-	ground(0, -250, 40, 10)
-	ground(90, -250, 200, 10)
-	ground(40, -250, 90, -70)
-	ground(40, -20, 90, 10)
-	-- The lobby looks out onto a cracked path, fence and dead trees in the rain.
-	Props.Part(parent, Vector3.new(60, 0.2, 12), CFrame.new(-30, 0.1, 65), Color3.fromRGB(70, 70, 68), M.Asphalt)
-	Props.Fence(parent, Vector3.new(-70, 0, -40), Vector3.new(-70, 0, 170))
-	Props.Fence(parent, Vector3.new(-70, 0, -40), Vector3.new(30, 0, -40))
-	for _ = 1, 26 do
+	-- Grass surrounds the footprint (never under the building, so nothing can
+	-- z-fight with the floors). Top surface sits just below floor level.
+	local groundColor = Color3.fromRGB(36, 40, 30)
+	local R = 320
+	local function ground(x0: number, z0: number, x1: number, z1: number)
+		Props.Part(parent, Vector3.new(x1 - x0, 2, z1 - z0), CFrame.new((x0 + x1) / 2, -1.05, (z0 + z1) / 2), groundColor, M.Grass, { Name = "Ground" })
+	end
+	ground(minX - R, minZ - R, minX, maxZ + R)
+	ground(maxX, minZ - R, maxX + R, maxZ + R)
+	ground(minX, minZ - R, maxX, minZ)
+	ground(minX, maxZ, maxX, maxZ + R)
+
+	local cx, cz = (minX + maxX) / 2, (minZ + maxZ) / 2
+	-- A cracked path leading up to the (bricked-up) main entrance.
+	Props.Part(parent, Vector3.new(60, 0.2, 12), CFrame.new(minX - 30, 0.05, 75), Color3.fromRGB(70, 70, 68), M.Asphalt)
+	Props.Fence(parent, Vector3.new(minX - 70, 0, minZ - 40), Vector3.new(minX - 70, 0, maxZ + 40))
+	Props.Fence(parent, Vector3.new(minX - 70, 0, minZ - 40), Vector3.new(maxX + 40, 0, minZ - 40))
+	for _ = 1, 30 do
 		local pos
 		repeat
-			pos = Vector3.new(rng:NextNumber(-220, 400), 0, rng:NextNumber(-220, 330))
-		until not (pos.X > -40 and pos.X < 240 and pos.Z > -90 and pos.Z < 170)
+			pos = Vector3.new(rng:NextNumber(minX - 220, maxX + 220), 0, rng:NextNumber(minZ - 220, maxZ + 220))
+		until not (pos.X > minX - 15 and pos.X < maxX + 15 and pos.Z > minZ - 15 and pos.Z < maxZ + 15)
 		Props.DeadTree(parent, pos, rng)
 	end
-	for _ = 1, 6 do
-		Props.DeadTree(parent, Vector3.new(rng:NextNumber(-65, -15), 0, rng:NextNumber(-30, 160)), rng)
-	end
-	-- Rain over the grounds near the windows and over the ravine.
-	Props.RainEmitter(parent, CFrame.new(-30, 45, 65), Vector3.new(70, 1, 150))
-	Props.RainEmitter(parent, CFrame.new(100, 45, 20), Vector3.new(200, 1, 30))
-	Props.RainEmitter(parent, CFrame.new(65, 30, -45), Vector3.new(60, 1, 60))
-	Props.RainEmitter(parent, CFrame.new(220, 45, 60), Vector3.new(30, 1, 100))
-	-- Ground fog outside.
-	Props.FogEmitter(parent, CFrame.new(-30, 2, 65), Vector3.new(60, 2, 140), 4, Color3.fromRGB(90, 100, 115))
-	-- River at the bottom of the ravine.
-	local outside = map.Regions.Outside
-	if outside then
-		local minV, maxV = map:Bounds("Outside")
-		Props.Part(parent, Vector3.new(maxV.X - minV.X, 1, 16), CFrame.new((minV.X + maxV.X) / 2, outside.Y - 0.4, minV.Z + 8), Color3.fromRGB(20, 30, 34), M.Glass, {
-			Transparency = 0.1,
-			Reflectance = 0.3,
-			CanCollide = false,
-			Name = "River",
-		})
-		for _ = 1, 10 do
-			Props.Part(parent, Vector3.new(rng:NextNumber(2, 6), rng:NextNumber(1, 4), rng:NextNumber(2, 6)), CFrame.new(rng:NextNumber(minV.X, maxV.X), outside.Y + 0.5, rng:NextNumber(minV.Z + 14, maxV.Z - 4)) * A(rng:NextNumber(0, 30), rng:NextNumber(0, 360), 0), Color3.fromRGB(60, 60, 58), M.Rock)
-		end
-		Props.FogEmitter(parent, CFrame.new((minV.X + maxV.X) / 2, outside.Y + 2, (minV.Z + maxV.Z) / 2), Vector3.new(40, 3, 40), 3, Color3.fromRGB(110, 120, 140))
-		-- Moonlight in the ravine.
-		local moon = Props.Part(parent, Vector3.new(1, 1, 1), CFrame.new((minV.X + maxV.X) / 2, outside.Y + 26, minV.Z + 10), Color3.new(), M.SmoothPlastic, {
-			Transparency = 1,
-			CanCollide = false,
-			CanQuery = false,
-		})
-		local spot = Instance.new("SpotLight")
-		spot.Face = Enum.NormalId.Bottom
-		spot.Angle = 80
-		spot.Range = 45
-		spot.Brightness = 1.4
-		spot.Color = Color3.fromRGB(150, 170, 220)
-		spot.Parent = moon
-	end
-	-- Atmosphere
+	Props.RainEmitter(parent, CFrame.new(minX - 30, 45, cz), Vector3.new(60, 1, maxZ - minZ + 60))
+	Props.RainEmitter(parent, CFrame.new(cx, 45, minZ - 25), Vector3.new(maxX - minX + 60, 1, 50))
+	Props.RainEmitter(parent, CFrame.new(cx, 45, maxZ + 25), Vector3.new(maxX - minX + 60, 1, 50))
+	Props.FogEmitter(parent, CFrame.new(minX - 30, 2, cz), Vector3.new(50, 2, maxZ - minZ + 40), 4, Color3.fromRGB(90, 100, 115))
+
 	local atmosphere = Lighting:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-	atmosphere.Density = 0.42
+	atmosphere.Density = 0.3
 	atmosphere.Offset = 0.1
-	atmosphere.Color = Color3.fromRGB(40, 44, 54)
-	atmosphere.Decay = Color3.fromRGB(20, 18, 24)
+	atmosphere.Color = Color3.fromRGB(46, 50, 60)
+	atmosphere.Decay = Color3.fromRGB(24, 22, 28)
 	atmosphere.Glare = 0
-	atmosphere.Haze = 2.2
+	atmosphere.Haze = 1.6
 	atmosphere.Parent = Lighting
 end
 

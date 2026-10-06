@@ -1,7 +1,7 @@
 --[[
 	Cinematic main menu.
 	  * live 3D backdrop: a slow camera dolly down a ruined corridor (MenuSet) with
-	    flickering tubes, fog and dust; the Grinner stands at the far end, breathing...
+	    flickering tubes, fog and dust; the Girl in White stands at the far end, head lolled...
 	    and every so often the screen glitches and it is suddenly closer
 	  * large flickering, glitching title; drifting fog layers; vignette
 	  * PLAY / SETTINGS / CREDITS with hover/click animations and sounds
@@ -14,8 +14,8 @@ local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Config = require(Shared.Config)
-local MonsterAnimator = require(Shared.MonsterAnimator)
-local MonsterRig = require(Shared.MonsterRig)
+local GirlRig = require(Shared.GirlRig)
+local RigAnimator = require(Shared.RigAnimator)
 local SoundLibrary = require(Shared.SoundLibrary)
 local Util = require(Shared.Util)
 
@@ -197,16 +197,16 @@ end
 
 local function spawnFigure(cf: CFrame)
 	if figure then
-		figure:PivotTo(cf + Vector3.new(0, MonsterRig.RootHeight, 0))
+		figure:PivotTo(cf + Vector3.new(0, GirlRig.RootHeight, 0))
 		return
 	end
-	local model = MonsterRig.Build()
-	MonsterRig.MakeStatic(model)
-	model.Name = "MenuGrinner"
-	model:PivotTo(cf + Vector3.new(0, MonsterRig.RootHeight, 0))
+	local model = GirlRig.Build()
+	GirlRig.MakeStatic(model)
+	model.Name = "MenuGirl"
+	model:PivotTo(cf + Vector3.new(0, GirlRig.RootHeight, 0))
 	model.Parent = Workspace
 	figure = model
-	figureAnimator = MonsterAnimator.new(model, { State = "Breathing" })
+	figureAnimator = RigAnimator.new(model, { State = "Stand" })
 	figureAnimator.SpeedOverride = 0
 	figureUnbind = figureAnimator:Bind()
 end

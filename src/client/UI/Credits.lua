@@ -19,7 +19,7 @@ local LINES = {
 	{ "DESIGN, CODE & PROCEDURAL ART", 16, nil, true },
 	{ "Your Studio Name", 22 },
 	{ "", 18 },
-	{ "THE GRINNER", 16, nil, true },
+	{ "THE GIRL IN WHITE", 16, nil, true },
 	{ "Procedurally rigged & animated in Luau", 20 },
 	{ "", 18 },
 	{ "AUDIO", 16, nil, true },
@@ -32,7 +32,7 @@ local LINES = {
 	{ "SPECIAL THANKS", 16, nil, true },
 	{ "Everyone who played with the lights off", 20 },
 	{ "", 30 },
-	{ "Don't let it see you run.", 22 },
+	{ "Don't look away.", 22 },
 }
 
 function Credits.Create(parent: Instance)

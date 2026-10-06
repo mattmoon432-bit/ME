@@ -193,7 +193,7 @@ function Audio.Init()
 		-- ambience
 		if Audio.InGame and now >= nextAmbient then
 			nextAmbient = now + Config.Audio.AmbientMinGap + math.random() * (Config.Audio.AmbientMaxGap - Config.Audio.AmbientMinGap)
-			if not Workspace:GetAttribute("ChaseActive") then
+			if not (Workspace:GetAttribute("Stage") == 0) then
 				playAmbient()
 			end
 		end

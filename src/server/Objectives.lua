@@ -1,13 +1,12 @@
 --[[
 	Objective / progression state for the run.
 
-	1 FindFuse      "Find a fuse."
-	2 RestorePower  "Restore the power."
-	3 FindExit      "Find the exit."
-	4 FindKey       "Find the basement key."      <- the Grinner starts hunting
-	5 Run           "RUN."                         <- signature chase
-	6 Escape        "Escape through the tunnel."
-	7 Escaped
+	0 Intro        ""                                 lights on, night shift begins
+	1 Flashlight   "Get your flashlight."             after the lights die
+	2 FindKey      "Find a key."                      she is hunting you now
+	3 OpenStorage  "Unlock the storage room."
+	4 Escape       "Get out through the main exit."
+	5 End          ""                                 bricks... behind you
 
 	The current stage is mirrored to Workspace:GetAttribute("Stage") for clients.
 ]]
@@ -22,31 +21,27 @@ local Util = require(Shared.Util)
 local Objectives = {}
 
 Objectives.Stages = {
-	{ Id = "FindFuse", Text = "Find a fuse." },
-	{ Id = "RestorePower", Text = "Restore the power." },
-	{ Id = "FindExit", Text = "Find the exit." },
-	{ Id = "FindKey", Text = "Find the basement key." },
-	{ Id = "Run", Text = "RUN." },
-	{ Id = "Escape", Text = "Escape through the maintenance tunnel." },
-	{ Id = "Escaped", Text = "" },
+	[0] = { Id = "Intro", Text = "" },
+	[1] = { Id = "Flashlight", Text = "Get your flashlight." },
+	[2] = { Id = "FindKey", Text = "Find a key." },
+	[3] = { Id = "OpenStorage", Text = "Unlock the storage room." },
+	[4] = { Id = "Escape", Text = "Get out through the main exit." },
+	[5] = { Id = "End", Text = "" },
 }
 
-Objectives.Stage = 1
+Objectives.Stage = 0
 Objectives.State = {
-	Power = false,
-	HasFuse = false,
-	KeyTaken = false,
+	IntroStarted = false,
+	FlashlightTaken = false,
+	StorageKey = false,
+	ExitKey = false,
 	StartTime = os.clock(),
 }
 
 -- Fired with (newStage, oldStage, player?) after every change.
 Objectives.StageChanged = Util.Signal.new()
--- Fired when the run is reset or rolled back to a checkpoint: (targetStage)
+-- Fired when the run is reset.
 Objectives.Reset = Util.Signal.new()
-
-function Objectives.Get(): number
-	return Objectives.Stage
-end
 
 function Objectives.Text(stage: number?): string
 	local def = Objectives.Stages[stage or Objectives.Stage]
@@ -79,30 +74,18 @@ function Objectives.Advance(fromStage: number, player: Player?)
 	end
 end
 
--- Full reset (new run).
 function Objectives.ResetRun()
-	Objectives.Stage = 1
-	Objectives.State.Power = false
-	Objectives.State.HasFuse = false
-	Objectives.State.KeyTaken = false
+	Objectives.Stage = 0
+	Objectives.State.IntroStarted = false
+	Objectives.State.FlashlightTaken = false
+	Objectives.State.StorageKey = false
+	Objectives.State.ExitKey = false
 	Objectives.State.StartTime = os.clock()
-	Workspace:SetAttribute("Stage", 1)
-	Workspace:SetAttribute("Power", false)
-	Objectives.Reset:Fire(1)
-	Objectives.Broadcast(false)
-end
-
--- Death during the final chase rolls back to "Find the basement key".
-function Objectives.RollbackTo(stage: number)
-	if Objectives.Stage <= stage then
-		return
-	end
-	Objectives.Stage = stage
-	Workspace:SetAttribute("Stage", stage)
-	if stage <= 4 then
-		Objectives.State.KeyTaken = false
-	end
-	Objectives.Reset:Fire(stage)
+	Workspace:SetAttribute("Stage", 0)
+	Workspace:SetAttribute("Power", true)
+	Workspace:SetAttribute("LowPower", false)
+	Workspace:SetAttribute("FlashlightTaken", false)
+	Objectives.Reset:Fire()
 	Objectives.Broadcast(false)
 end
 
@@ -111,8 +94,10 @@ function Objectives.Elapsed(): number
 end
 
 function Objectives.Init()
-	Workspace:SetAttribute("Stage", 1)
-	Workspace:SetAttribute("Power", false)
+	Workspace:SetAttribute("Stage", 0)
+	Workspace:SetAttribute("Power", true)
+	Workspace:SetAttribute("LowPower", false)
+	Workspace:SetAttribute("FlashlightTaken", false)
 	Players.PlayerAdded:Connect(function(player)
 		task.defer(Objectives.SendTo, player)
 	end)

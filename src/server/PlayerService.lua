@@ -7,7 +7,6 @@
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local AnimationIds = require(Shared.AnimationIds)
@@ -19,7 +18,7 @@ local Objectives = require(script.Parent.Objectives)
 local PlayerService = {}
 PlayerService.Look = {} :: { [Player]: Vector3 }
 PlayerService.Playing = {} :: { [Player]: boolean }
-PlayerService.RetryChase = false
+PlayerService.Spawned = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Util).Signal.new() -- (player)
 
 local settingsStore = nil
 pcall(function()
@@ -79,13 +78,13 @@ end
 function PlayerService.Init(map)
 	PlayerService.Map = map
 
+	-- Before the flashlight you start in the office; afterwards, in the corridor outside it.
 	local function checkpoint(): CFrame
 		local anchors = map.Anchors
-		local stage = Objectives.Stage
-		if stage == 4 and PlayerService.RetryChase then
-			return anchors.HallEast
+		if Objectives.Stage <= 1 then
+			return anchors.Spawn
 		end
-		return anchors.LobbySpawn
+		return anchors.Checkpoint
 	end
 
 	local function setupCharacter(player: Player, character: Model)
@@ -96,7 +95,7 @@ function PlayerService.Init(map)
 		humanoid.UseJumpPower = false
 		humanoid.JumpHeight = 4.5
 		humanoid.BreakJointsOnDeath = false
-		for _, name in { "Crouching", "Sprinting", "Flashlight", "Afraid", "Chased" } do
+		for _, name in { "Crouching", "Sprinting", "Flashlight", "Afraid" } do
 			character:SetAttribute(name, false)
 		end
 		character:SetAttribute("Action", "")
@@ -121,7 +120,6 @@ function PlayerService.Init(map)
 			if not player:GetAttribute("Dead") then
 				player:SetAttribute("Dead", true)
 				Remotes.Event("PlayerDied"):FireClient(player, "Unknown")
-				PlayerService._afterDeath()
 			end
 		end)
 	end
@@ -151,6 +149,7 @@ function PlayerService.Init(map)
 		character:PivotTo(checkpoint())
 		Remotes.Event("Spawned"):FireClient(player, Objectives.Stage)
 		Objectives.SendTo(player)
+		PlayerService.Spawned:Fire(player)
 	end
 
 	function PlayerService.ToMenu(player: Player)
@@ -161,7 +160,6 @@ function PlayerService.Init(map)
 			character:Destroy()
 			player.Character = nil
 		end
-		PlayerService._afterDeath()
 	end
 
 	Players.PlayerAdded:Connect(function(player)
@@ -181,7 +179,6 @@ function PlayerService.Init(map)
 	Players.PlayerRemoving:Connect(function(player)
 		PlayerService.Playing[player] = nil
 		PlayerService.Look[player] = nil
-		PlayerService._afterDeath()
 	end)
 
 	Remotes.Event("RequestPlay").OnServerEvent:Connect(function(player)
@@ -189,7 +186,7 @@ function PlayerService.Init(map)
 			return
 		end
 		-- Starting fresh after an escape (or alone after a wipe) restarts the run.
-		if #PlayerService.ActivePlayers() == 0 and (Objectives.Stage >= 7 or player:GetAttribute("Won")) then
+		if #PlayerService.ActivePlayers() == 0 and (Objectives.Stage >= 5 or player:GetAttribute("Won")) then
 			Objectives.ResetRun()
 		end
 		PlayerService.Spawn(player)
@@ -246,7 +243,7 @@ function PlayerService.Init(map)
 	end)
 end
 
--- The monster caught `player`.
+-- The Girl caught `player`.
 function PlayerService.Kill(player: Player, monster)
 	if player:GetAttribute("Dead") then
 		return
@@ -267,17 +264,6 @@ function PlayerService.Kill(player: Player, monster)
 		character:SetAttribute("Afraid", true)
 	end
 	Remotes.Event("Jumpscare"):FireClient(player, monster.Root.CFrame)
-	PlayerService._afterDeath()
-end
-
--- When nobody is left alive in the final chase, roll back to "Find the basement key".
-function PlayerService._afterDeath()
-	task.delay(2, function()
-		if #PlayerService.ActivePlayers() == 0 and Objectives.Stage >= 5 and Objectives.Stage < 7 then
-			PlayerService.RetryChase = true
-			Objectives.RollbackTo(4)
-		end
-	end)
 end
 
 function PlayerService.MarkWon()
@@ -286,7 +272,6 @@ function PlayerService.MarkWon()
 			player:SetAttribute("Won", true)
 		end
 	end
-	Workspace:SetAttribute("ChaseActive", false)
 end
 
 return PlayerService

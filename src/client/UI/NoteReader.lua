@@ -1,4 +1,4 @@
--- Paper note overlay. Freezes movement while reading; close with E, ESC, Space or click.
+-- Paper note overlay. Freezes movement and camera while reading; close with E, ESC, Space or click.
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
@@ -7,7 +7,7 @@ local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local SoundLibrary = require(Shared.SoundLibrary)
 local Util = require(Shared.Util)
 
-local Movement = require(script.Parent.Parent.Movement)
+local Lock = require(script.Parent.Parent.Lock)
 local Theme = require(script.Parent.Theme)
 
 local NoteReader = {}
@@ -104,7 +104,7 @@ function NoteReader.Show(title: string, body: string)
 	bodyLabel.Text = body
 	NoteReader.Open = true
 	gui.Enabled = true
-	Movement.Frozen = true
+	Lock.Push("Note")
 	backdrop.BackgroundTransparency = 1
 	Util.tween(backdrop, 0.3, { BackgroundTransparency = 0.45 })
 	scale.Scale = 0.85
@@ -136,7 +136,7 @@ function NoteReader.Close()
 	tween.Completed:Once(function()
 		if not NoteReader.Open then
 			gui.Enabled = false
-			Movement.Frozen = false
+			Lock.Pop("Note")
 		end
 	end)
 end

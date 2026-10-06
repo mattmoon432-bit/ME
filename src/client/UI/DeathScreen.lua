@@ -18,13 +18,12 @@ DeathScreen.OnMenu = nil :: (() -> ())?
 
 local C = Theme.Colors
 local TIPS = {
-	"It hears you when you run.",
-	"Crouching makes you harder to see.",
-	"The break room door is steel. It can't get through steel.",
-	"When it freezes and turns its head... you have seconds.",
-	"Break its line of sight and it may lose you.",
-	"Stopping during the final chase is death. Keep moving.",
-	"Your flashlight helps you see. It also helps it see you.",
+	"She only moves when nobody is looking at her.",
+	"Back away slowly. Keep your eyes on her.",
+	"When the lights blink, she moves.",
+	"Listen for the stomping. If you hear it, she's coming.",
+	"Don't turn your back on her.",
+	"The storage key is somewhere in Ward C.",
 }
 
 local gui: ScreenGui

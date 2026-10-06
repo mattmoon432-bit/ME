@@ -1,13 +1,12 @@
-# HOLLOWMERE — Subject 09
+# HOLLOWMERE — Don't Look Away
 
-A cinematic Roblox horror game about **The Grinner**: a 12-stud, barely-human thing with
-arms past its knees and a smile wider than its skull. It stalks you through an abandoned
-psychiatric annex. When it notices you, it freezes, turns its head all the way around,
-goes silent, **screams**, and then runs at you faster than anything should move.
+A cinematic Roblox horror game about **the Girl in White**, a too-tall figure in a
+filthy nightgown with black hair hanging over her face. She follows Weeping Angel
+rules: **while anyone is looking at her she cannot move**. Look away, or let the lights
+blink, and you hear her stomping toward you.
 
-Everything is generated in code: the map, the props, the monster rig, all the animations
-and the UI. The project has no uploaded meshes, images or animations, so it runs as soon
-as you sync it.
+Everything is generated in code: the map, the props, her rig, all the animations and
+the UI. The project has no uploaded meshes, images or animations.
 
 ---
 
@@ -43,97 +42,90 @@ Mobile and gamepad buttons are created through `ContextActionService`.
 
 | # | Objective | What happens |
 | --- | --- | --- |
-| – | **Main menu** | A live 3D corridor with a slow camera dolly, fog, flickering tubes, an animated title, and the Grinner breathing at the far end. It sometimes glitches closer. The menu has PLAY / SETTINGS / CREDITS. |
-| 1 | *Find a fuse.* | It's pitch black and you only have a flashlight. The reception log points you to Storage. When you pick up the fuse, the Grinner appears at the end of the corridor, watching. It vanishes when you look away. |
-| 2 | *Restore the power.* | You insert the fuse in the Generator Room and the lights stutter back to life. Seven seconds later, something screams downstairs. |
-| 3 | *Find the exit.* | The main doors are chained shut. A note says the only way out is the maintenance tunnel, and the key is in Security. The office phone rings; if you answer, it breathes and says "I SEE YOU". |
-| 4 | *Find the basement key.* | A blackout hits, and when the lights return the Grinner is loose: it patrols, investigates, stalks and chases. The Security door creaks open on its own. The Break Room (steel door) is the safe room. |
-| 5 | **RUN.** | Taking the key sets off red alarm lighting and jams the safe room. The Grinner appears at the far end of the corridor, back turned. Its head rotates 180°, everything goes silent, it screams, and it sprints straight at you. |
-| 6 | *Escape through the maintenance tunnel.* | You run down the stairwell, through the sub-level corridor (weaving around debris) and the flooded tunnel. |
-| ✓ | **YOU ESCAPED** | The gate crashes down behind you. The Grinner slams against it, then you get the epilogue. |
+| – | **Main menu** | A live 3D corridor with fog, flickering tubes, an animated title and the Girl standing at the far end. She glitches closer now and then. The menu has PLAY / SETTINGS / CREDITS. |
+| 0 | *(intro)* | You start in a lit night office. After a few quiet seconds the power dies. "Huh? What was that...?" |
+| 1 | *Get your flashlight.* | The flashlight on the desk pulses with a yellow glow. Pick it up, and **the moment you turn around she leaps into your face** and screams. |
+| 2 | *Find a key.* | She is hunting you now. Notes point to Ward C, where the storage key lies on a bloody bed. |
+| 3 | *Unlock the storage room.* | The padlocked storage room holds the main-entrance key. |
+| 4 | *Get out through the main exit.* | You unlock the exit doors and swing them open, revealing a solid brick wall. |
+| ✓ | **THE END** | You can look around but not move. As soon as you turn your back on the wall she leaps at you, and the game ends. If you never turn, something turns you. |
 
-If you die during the final chase, you restart right outside the Security office with
-the key back on its hook, so retries are quick.
+If she catches you, you get a jumpscare and RESTART puts you back in the corridor
+outside the office. Keys you already found stay found.
 
----
+Any story text on screen (subtitles, chapter cards, notes) **freezes your character
+and camera** until it disappears. Subtitles are always white.
 
 ## Project structure
 
 ```
 default.project.json          Rojo project
 src/shared/  (ReplicatedStorage.Shared)
-  Config.lua                  ALL tuning: speeds, ranges, timings, stamina, FOV
+  Config.lua                  ALL tuning: speeds, timings, stamina, lighting levels
   Sounds.lua                  every sound, grouped by folder; put your asset ids here
   SoundLibrary.lua            builds SoundService/{Ambient,Music,Monster,Player,UI,Jumpscare} + SoundGroups
   AnimationIds.lua            optional keyframe animation ids (override procedural ones)
-  MonsterRig.lua              builds the Grinner (Motor6D rig + Humanoid)
-  MonsterPoses.lua            16 procedural monster animations
-  MonsterAnimator.lua         blends poses, head tracking, footstep events, AnimationTrack override
+  GirlRig.lua                 builds the Girl in White (Motor6D rig + Humanoid)
+  GirlPoses.lua               her procedural animations
+  RigAnimator.lua             blends poses, freezing, head tracking, footstep events, AnimationTrack override
   Remotes.lua, Util.lua
 src/server/  (ServerScriptService.Server)
-  init.server.lua             entry point / wiring / progression
-  MapLayout.lua               cell-grid floor plans (ground floor + sub-level)
-  MapBuilder.lua              walls, floors, ceilings, windows, doors, lights, stairs, exterior, menu set
-  Props.lua                   procedural prop library (furniture, pipes, blood, graffiti, fog, rain...)
-  Decorator.lua               furnishes every room + environmental storytelling
-  Doors.lua                   hinged doors, locks, monster smashing, auto-open during chases
-  Interactions.lua            fuse, fuse box, key, notes, drawer, phone, radio, wheelchair scare, exit gate
+  init.server.lua             entry point / story beats
+  MapLayout.lua               cell-grid floor plan
+  MapBuilder.lua              walls, floors, ceilings, windows, doors, lights, bricked exit, exterior, menu set
+  Props.lua                   procedural prop library (furniture, dolls, blood, graffiti, fog, rain...)
+  Decorator.lua               furnishes every room (wall decorations are raycast-validated)
+  Doors.lua                   hinged doors, padlocks, the Girl bursting doors open
+  Interactions.lua            flashlight, keys, notes, music box, storage & exit doors
   Objectives.lua              stage machine
-  MonsterAI.lua               server AI state machine
-  ChaseDirector.lua           chase world state, safe room, final chase
-  Noise.lua                   noise events the monster hears
+  GirlAI.lua                  "only moves when nobody is looking" AI
   PlayerService.lua           spawn / death / restart / menu / settings DataStore
 src/client/  (StarterPlayerScripts.Client)
-  init.client.lua             entry point / game flow
+  init.client.lua             entry point / game flow / scripted scares
+  Lock.lua                    freezes movement/camera while story text is on screen
   Audio.lua                   volume groups, ducking, crossfaded loops, heartbeat, random ambience
   CameraFX.lua                trauma shake, FOV layers, head bob, roll
   PostFX.lua                  vignettes, chromatic fringe, grain, scanlines, grading, blur, flashes
-  ChaseFX.lua                 turns monster proximity/chase state into music, heartbeat, FOV, screen FX
-  LightController.lua         flicker / broken / emergency / alarm lights; lights die near the monster
-  Movement.lua                sprint + stamina, crouch, flashlight, chase speed boost, view mode
+  TensionFX.lua               her proximity -> music, heartbeat, breathing, screen FX
+  LightController.lua         flicker / broken / emergency lights, low-power, blinks
+  Movement.lua                sprint + stamina, crouch, flashlight, view mode
   PlayerAnimator.lua          crouch / fear / interact / door / pickup layers for every player
-  MonsterVisuals.lua          animates the monster locally + gait-synced footsteps
-  Jumpscare.lua               the animated jumpscare
+  GirlVisuals.lua             animates her locally, instant local freeze, stomps
+  Jumpscare.lua               the animated leap jumpscare
   UI/                         Theme, Widgets, Fader, MainMenu, SettingsMenu, Credits, HUD,
-                              PromptUI, NoteReader, DeathScreen, WinScreen
+                              PromptUI, NoteReader, DeathScreen, WinScreen (THE END)
 ```
 
 ---
 
-## The monster AI (`MonsterAI.lua`)
+## The Girl's AI (`src/server/GirlAI.lua`)
 
-The AI runs on the server at 10 Hz. Animation intent is published as attributes
-(`AnimState`, `LookTarget`, `ChaseTarget`, `Hidden`) and every client animates the rig
-locally at full frame rate.
+- **Watched means frozen.** Every 0.05 s the server checks every player's camera
+  direction (reported by the client) plus line of sight to her head, chest and feet.
+  If anyone can see her, her body is anchored and her animation stops mid-pose. The
+  local client also freezes her on the same frame it sees her, so you never catch
+  her moving.
+- **Unwatched means she moves.** She pathfinds to the nearest player at
+  `Config.Girl.Speed` (17; you walk at 11 and sprint at 18) with a stop-motion
+  lurching run. Every step is a very loud stomp that shakes your camera when she's
+  close. Closed doors burst open.
+- **Blinks.** If you stare at her long enough, the lights (and your flashlight) cut
+  out for 0.7 s. Nobody can see in the dark, so she lurches closer.
+- **Spawning.** She always appears out of sight, at least 45 studs from everyone.
+- **Catch.** Within 3.6 studs you get her leap jumpscare and die. She vanishes and
+  returns a few seconds later.
 
-| State | Behaviour |
-| --- | --- |
-| **DORMANT** | Hidden; only scripted appearances (stages 1–3). |
-| **IDLE** | Hunched, twitching, looking around. |
-| **PATROL** | Pathfinds between patrol nodes, biased toward the area players are in. Opens doors it walks into (DoorOpen animation). |
-| **INVESTIGATE** | Walks (or runs, for loud noises) to sprinting, doors, objective interactions, or something it half-saw. |
-| **STALK** | Teleports to a vantage point the player can see but isn't looking at: the end of a hallway, a doorway, behind the generator-room window. It stares and creeps closer while unobserved, then **vanishes the moment you look away** (the client reports camera direction). |
-| **DETECTED** | Head turn (body frozen, head rotates up to 175°), then silence (all audio ducks to zero), then scream (the body snaps to face you, arms spread). |
-| **CHASE** | Launches at burst speed, accelerates over time, catches up when far behind and stays on your heels when close. Smashes doors (with a stagger). Loses you after 5 s without line of sight (normal chases only). |
-| **ATTACK** | Strike, then grab, and the victim gets the jumpscare. |
-| **SEARCH** | Scans the last known position. |
-| **SLAM** | If you reach the safe room, the steel door slams shut behind you. It pounds on the door, stares, and disappears. |
-
-Detection uses a vision cone, range and line of sight. Crouching shrinks the range, while
-your flashlight and sprinting grow it, and a suspicion meter fills faster when you're close.
-Windows don't block sight (the glass has `CanQuery = false`).
-
----
+All tuning is in `Config.Girl`.
 
 ## Animations
 
 **No fake animation code.** Every animation is a real procedural animation that drives
 `Motor6D.Transform` each frame.
 
-**Monster** (`MonsterPoses.lua`): Idle, Breathing, LookAround, Search, SlowWalk, Walk
-(with a limp), Sprint, AggressiveSprint (torso near-horizontal, arms swept back and
-flapping, head cocked 50°, jaw shaking), HeadTurn, Scream, Attack, Grab, Jumpscare,
-Stagger (death/door recoil), DoorOpen, DoorSlam.
+**The Girl** (`GirlPoses.lua`): Stand (head lolled, faint sway), Run (stop-motion
+lurch, arms reaching forward, head cocked), Crouch (coiled before the leap), Leap
+(arms flung wide, mouth torn open, shaking) and Scream. "Frozen" isn't an animation:
+she simply stops wherever she is.
 
 **Player** (`client/PlayerAnimator.lua`): walk and run use Roblox's stock R15 animations.
 On top of those sit procedural layers for crouch, sprint lean, fear (arms up, trembling),
@@ -147,7 +139,7 @@ version of that state. The animator loads it as an `AnimationTrack` and stops wr
 transforms while it plays. To author monster animations, get the rig in Studio with:
 
 ```lua
-require(game.ReplicatedStorage.Shared.MonsterRig).Build().Parent = workspace
+require(game.ReplicatedStorage.Shared.GirlRig).Build().Parent = workspace
 ```
 
 ---
@@ -163,9 +155,10 @@ screams, heartbeats and so on, so the game is atmospheric with zero uploads. **F
 polished release, put real horror audio in the `id` field of each entry in
 `src/shared/Sounds.lua`.** The most valuable ones to replace:
 
-- `Monster.Scream`, `Jumpscare.Scream`: the two most important sounds in the game
-- `Music.ChaseLoop`, `Music.ChaseDrone`, `Music.Tension`, `Music.MenuTheme`
-- `Monster.Footstep`, `Monster.Breath`, `Player.Heartbeat`, `Player.Breathing`
+- `Jumpscare.Scream`: the single most important sound in the game
+- `Monster.Stomp`, `Monster.Breath`, `Ambient.Giggle`, `Ambient.MusicBox`
+- `Music.Tension`, `Music.Pulse`, `Music.MenuTheme`, `Music.Ending`
+- `Player.Heartbeat`, `Player.Breathing`
 - `Ambient.Drone`, `Ambient.DistantBang`, `Ambient.MetalCreak`, `Ambient.Whisper`
 
 ---
@@ -174,16 +167,16 @@ polished release, put real horror audio in the `id` field of each entry in
 
 Everything that affects pacing lives in `src/shared/Config.lua`:
 
-- `Config.Monster.FinalBaseSpeed / FinalMaxSpeed / FinalBurstSpeed`: final chase speed
-- `HeelDistance / HeelSlowThreshold`: how hard it punishes slowing down when it's right behind you
-- `ChaseBaseSpeed / ChaseRamp / ChaseMaxSpeed / LoseTrackTime`: normal chases
-- `HeadTurnTime / SilenceTime / ScreamTime`: the detection beat
-- `SightRange / FieldOfView / SuspicionRate`: how perceptive it is
-- `Config.Player.*`: walk/sprint/crouch speeds, stamina, chase boost
+- `Config.Girl.Speed / CatchDistance`: how fast she closes in when unwatched
+- `Config.Girl.ViewDot / SightRange`: how directly you must look at her to hold her still
+- `Config.Girl.BlinkMinInterval / BlinkMaxInterval / BlinkDuration`: the light blinks
+- `Config.Girl.ActivateDelay / MinSpawnDistance / RespawnDelay`
+- `Config.Timing.*`: intro blackout delay, turn-around timeouts
+- `Config.Lighting.*`: ambient level and post-blackout light level (raise these if it's too dark)
+- `Config.Player.*`: walk/sprint/crouch speeds, stamina, flashlight
 
 The floor plan is plain data in `src/server/MapLayout.lua`. Add regions, edges (doors,
-windows, openings), patrol cells and stalk points, and the builder handles walls, lights
-and doors.
+windows, openings) and patrol cells, and the builder handles walls, lights and doors.
 
 ---
 
@@ -193,5 +186,5 @@ and doors.
   (speeds, timings) should still be tuned by playtesting in Studio.
 - The built-in fallback sounds are a stand-in. Real assets in `Sounds.lua` are the
   single biggest upgrade.
-- Multiplayer works as co-op (shared objectives; the monster hunts one target at a
-  time), but the pacing is designed for 1–4 players.
+- Multiplayer works as co-op (shared objectives; she hunts the nearest player and is
+  held still if *anyone* is watching her), but the pacing is designed for 1–4 players.

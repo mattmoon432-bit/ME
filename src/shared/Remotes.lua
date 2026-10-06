@@ -9,19 +9,19 @@ local EVENTS = {
 	"RequestRestart",
 	"RequestMenu",
 	"SetMoveState", -- { Crouching, Sprinting, Flashlight, Afraid }
-	"CameraLook", -- Vector3 look direction (throttled), used for "disappears when you look away"
+	"CameraLook", -- Vector3 look direction: the Girl only moves while nobody is looking
+
 	"SaveSettings",
-	"NoteClosed",
 
 	-- server -> client
 	"ObjectiveUpdate", -- (stageIndex, text, isNew)
-	"ShowMessage", -- (text, duration, style)
+	"ShowMessage", -- (text, duration, style)  shown as a subtitle; freezes the player while visible
 	"ShowNote", -- (title, body)
-	"ChaseCue", -- (cue, data)  cues: HeadTurn, Silence, Scream, ChaseStart, ChaseEnd, Slam, Glimpse
-	"Jumpscare", -- (monsterCFrame)
-	"PlayerDied", -- (reason) non-monster deaths
-	"GameWon", -- (timeTaken)
-	"ScareEvent", -- (name, data) scripted scares: PowerOn, Blackout, PhoneRing, Thunder...
+	"ScareEvent", -- (name, data) Blackout, Blink, Stinger, Unlock...
+	"TurnScare", -- you picked up the flashlight; she's waiting for you to turn around
+	"FinalScare", -- (doorCFrame) the exit is a brick wall... turn around
+	"Jumpscare", -- (girlCFrame) she caught you
+	"PlayerDied", -- (reason) non-girl deaths
 	"Spawned", -- confirms a character spawn after PLAY / RESTART
 	"LoadSettings", -- (settingsTable)
 }
