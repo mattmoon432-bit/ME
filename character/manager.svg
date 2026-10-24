@@ -1,0 +1,161 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" width="800" height="1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c1a24"/><stop offset="1" stop-color="#0b0a0f"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#6b3fa0" stop-opacity="0.45"/><stop offset="1" stop-color="#6b3fa0" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3f2618"/><stop offset="0.45" stop-color="#5c3a25"/><stop offset="1" stop-color="#432819"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f6dd8a"/><stop offset="0.5" stop-color="#c99a2e"/><stop offset="1" stop-color="#8a6416"/>
+    </linearGradient>
+    <linearGradient id="lens" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0.04"/><stop offset="1" stop-color="#ffffff" stop-opacity="0.15"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="1000" fill="url(#bg)"/>
+  <rect width="800" height="1000" fill="url(#glow)"/>
+  <!-- studio panels -->
+  <g fill="#ffffff" opacity="0.035">
+    <rect x="40" y="60" width="120" height="300" rx="6"/><rect x="640" y="60" width="120" height="300" rx="6"/>
+    <rect x="40" y="380" width="120" height="300" rx="6"/><rect x="640" y="380" width="120" height="300" rx="6"/>
+  </g>
+
+  <!-- back locs -->
+  <g stroke="#0d0b0b" stroke-width="22" stroke-linecap="round" fill="none">
+    <path d="M300 330 C 270 420, 265 500, 280 600"/>
+    <path d="M318 300 C 290 400, 292 500, 300 620"/>
+    <path d="M500 330 C 530 420, 535 500, 520 600"/>
+    <path d="M482 300 C 510 400, 508 500, 500 620"/>
+  </g>
+  <g stroke="#2a2220" stroke-width="3" fill="none" opacity="0.7">
+    <path d="M300 330 C 270 420, 265 500, 280 600" stroke-dasharray="6 10"/>
+    <path d="M500 330 C 530 420, 535 500, 520 600" stroke-dasharray="6 10"/>
+  </g>
+
+  <!-- torso: oversized black tee -->
+  <path d="M150 1000 L 170 760 C 180 690, 240 655, 330 640 L 470 640 C 560 655, 620 690, 630 760 L 650 1000 Z" fill="#141317"/>
+  <path d="M170 760 C 180 690, 240 655, 330 640 L 300 700 L 190 790 Z" fill="#1d1c21"/>
+  <path d="M630 760 C 620 690, 560 655, 470 640 L 500 700 L 610 790 Z" fill="#1d1c21"/>
+
+  <!-- arms (forearms out of sleeves) -->
+  <path d="M175 780 L 228 790 L 222 1000 L 160 1000 Z" fill="url(#skin)"/>
+  <path d="M625 780 L 572 790 L 578 1000 L 640 1000 Z" fill="url(#skin)"/>
+  <!-- sleeves -->
+  <path d="M150 820 L 170 740 C 185 700, 230 690, 250 700 L 245 815 Z" fill="#141317"/>
+  <path d="M650 820 L 630 740 C 615 700, 570 690, 550 700 L 555 815 Z" fill="#141317"/>
+  <!-- sleeve tattoos -->
+  <g fill="none" stroke="#1a0f0a" stroke-width="3" opacity="0.85">
+    <path d="M175 840 C 195 830, 215 850, 225 840"/><path d="M180 870 q 20 -18 40 0 q -20 18 -40 0"/>
+    <circle cx="198" cy="915" r="16"/><path d="M190 915 l8 -10 l8 10 l-8 10 z"/>
+    <path d="M168 960 C 190 950, 205 975, 224 960"/><path d="M172 990 l 50 -8"/>
+    <path d="M580 840 C 600 830, 615 850, 622 838"/><path d="M582 875 q 18 -22 36 0 q -18 22 -36 0"/>
+    <path d="M588 930 l 30 0 M603 915 l 0 32"/><circle cx="603" cy="975" r="14"/>
+  </g>
+  <!-- watch -->
+  <rect x="566" y="955" width="80" height="26" rx="8" fill="url(#gold)"/>
+  <rect x="590" y="948" width="34" height="40" rx="9" fill="url(#gold)" stroke="#6e4f12" stroke-width="2"/>
+  <rect x="595" y="953" width="24" height="30" rx="6" fill="#0d3b2e"/>
+  <!-- bracelet -->
+  <rect x="162" y="960" width="66" height="12" rx="6" fill="#d9d9e0"/>
+
+  <!-- tee graphic -->
+  <text x="400" y="905" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="34" fill="#e8e2d6" opacity="0.9">Ledger Sound</text>
+  <text x="400" y="940" text-anchor="middle" font-family="Arial, sans-serif" font-weight="700" letter-spacing="6" font-size="16" fill="#9b6fd0">MGMT · EST 2019</text>
+
+  <!-- neck -->
+  <path d="M345 540 L 455 540 L 465 650 C 430 675, 370 675, 335 650 Z" fill="url(#skin)"/>
+  <!-- neck tattoo -->
+  <path d="M430 600 c 10 -12, 22 -4, 18 8 c -4 12 -20 10 -18 -8" fill="none" stroke="#1a0f0a" stroke-width="2.5" opacity="0.8"/>
+  <!-- collar -->
+  <path d="M330 640 C 360 680, 440 680, 470 640" fill="none" stroke="#2a292f" stroke-width="10"/>
+
+  <!-- chains -->
+  <path d="M338 648 C 360 720, 440 720, 462 648" fill="none" stroke="url(#gold)" stroke-width="11" stroke-dasharray="9 3"/>
+  <path d="M345 655 C 365 770, 435 770, 455 655" fill="none" stroke="#e6e6ee" stroke-width="4"/>
+  <g transform="translate(400 768)">
+    <rect x="-6" y="0" width="12" height="52" rx="2" fill="#f2f2f7" stroke="#9aa0ad" stroke-width="1.5"/>
+    <rect x="-20" y="12" width="40" height="12" rx="2" fill="#f2f2f7" stroke="#9aa0ad" stroke-width="1.5"/>
+    <circle cx="0" cy="18" r="2.5" fill="#bfe3ff"/>
+  </g>
+
+  <!-- ears -->
+  <ellipse cx="288" cy="420" rx="20" ry="32" fill="#4a2e1d"/>
+  <ellipse cx="512" cy="420" rx="20" ry="32" fill="#4a2e1d"/>
+  <!-- stud earrings -->
+  <circle cx="288" cy="446" r="7" fill="#ffffff"/><circle cx="286" cy="444" r="2.5" fill="#bfe3ff"/>
+  <circle cx="512" cy="446" r="7" fill="#ffffff"/><circle cx="510" cy="444" r="2.5" fill="#bfe3ff"/>
+
+  <!-- head -->
+  <path d="M290 380 C 290 290, 340 260, 400 260 C 460 260, 510 290, 510 380 C 510 470, 480 550, 400 560 C 320 550, 290 470, 290 380 Z" fill="url(#skin)"/>
+  <!-- jaw shading -->
+  <path d="M300 440 C 315 520, 360 555, 400 560 C 440 555, 485 520, 500 440 C 480 500, 440 535, 400 538 C 360 535, 320 500, 300 440 Z" fill="#000" opacity="0.15"/>
+
+  <!-- hairline / temples -->
+  <path d="M292 375 C 290 300, 335 255, 400 252 C 465 255, 510 300, 508 375 C 495 330, 470 305, 440 300 C 410 312, 390 312, 360 300 C 330 305, 305 330, 292 375 Z" fill="#0d0b0b"/>
+  <!-- locs gathered upward -->
+  <g stroke="#0d0b0b" stroke-width="20" stroke-linecap="round" fill="none">
+    <path d="M330 300 C 345 260, 370 230, 395 215"/>
+    <path d="M365 290 C 375 255, 390 230, 400 210"/>
+    <path d="M435 290 C 425 255, 410 230, 402 210"/>
+    <path d="M470 300 C 455 260, 430 230, 405 215"/>
+  </g>
+  <!-- top bun -->
+  <g fill="#0d0b0b">
+    <circle cx="400" cy="185" r="40"/><circle cx="370" cy="170" r="24"/><circle cx="432" cy="168" r="24"/>
+    <circle cx="400" cy="148" r="26"/>
+  </g>
+  <g fill="none" stroke="#2c2422" stroke-width="3" opacity="0.8">
+    <path d="M372 160 q 10 25 0 45"/><path d="M398 135 q 12 35 0 75"/><path d="M425 155 q -10 25 2 50"/>
+    <path d="M345 285 C 355 255, 375 235, 392 222" stroke-dasharray="5 8"/>
+    <path d="M455 285 C 445 255, 425 235, 408 222" stroke-dasharray="5 8"/>
+  </g>
+  <!-- loose locs hanging -->
+  <g stroke="#0d0b0b" stroke-width="16" stroke-linecap="round" fill="none">
+    <path d="M375 175 C 340 190, 320 230, 312 270"/>
+    <path d="M430 178 C 470 195, 485 240, 488 285"/>
+  </g>
+  <!-- gold loc cuff -->
+  <rect x="480" y="252" width="18" height="10" rx="3" fill="url(#gold)" transform="rotate(80 489 257)"/>
+
+  <!-- eyebrows -->
+  <path d="M330 385 C 345 372, 370 370, 385 378" stroke="#0d0b0b" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <path d="M415 378 C 430 370, 455 372, 470 385" stroke="#0d0b0b" stroke-width="9" stroke-linecap="round" fill="none"/>
+  <!-- eyes -->
+  <ellipse cx="358" cy="413" rx="17" ry="9" fill="#f1e9de"/><circle cx="360" cy="413" r="8" fill="#2a170c"/><circle cx="363" cy="410" r="2.2" fill="#fff"/>
+  <ellipse cx="442" cy="413" rx="17" ry="9" fill="#f1e9de"/><circle cx="440" cy="413" r="8" fill="#2a170c"/><circle cx="443" cy="410" r="2.2" fill="#fff"/>
+  <path d="M340 410 C 350 400, 368 400, 376 408" stroke="#1a0f0a" stroke-width="3" fill="none"/>
+  <path d="M424 408 C 432 400, 450 400, 460 410" stroke="#1a0f0a" stroke-width="3" fill="none"/>
+
+  <!-- glasses: black rims, clear lenses -->
+  <g>
+    <rect x="318" y="388" width="78" height="56" rx="16" fill="url(#lens)" stroke="#0a0a0a" stroke-width="7"/>
+    <rect x="404" y="388" width="78" height="56" rx="16" fill="url(#lens)" stroke="#0a0a0a" stroke-width="7"/>
+    <path d="M396 404 C 399 397, 401 397, 404 404" stroke="#0a0a0a" stroke-width="6" fill="none"/>
+    <path d="M318 400 L 292 396" stroke="#0a0a0a" stroke-width="6"/><path d="M482 400 L 508 396" stroke="#0a0a0a" stroke-width="6"/>
+    <path d="M330 396 l 22 0" stroke="#fff" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+    <path d="M416 396 l 22 0" stroke="#fff" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+  </g>
+
+  <!-- nose -->
+  <path d="M398 430 C 396 455, 388 470, 380 478 C 390 488, 410 488, 420 478" fill="none" stroke="#2c1a10" stroke-width="3.5" stroke-linecap="round"/>
+  <ellipse cx="385" cy="478" rx="7" ry="4" fill="#2c1a10" opacity="0.6"/><ellipse cx="415" cy="478" rx="7" ry="4" fill="#2c1a10" opacity="0.6"/>
+  <!-- mustache + beard -->
+  <path d="M362 500 C 380 490, 420 490, 438 500 C 420 497, 380 497, 362 500 Z" fill="#0d0b0b" stroke="#0d0b0b" stroke-width="4"/>
+  <path d="M370 528 C 385 548, 415 548, 430 528 C 425 555, 375 555, 370 528 Z" fill="#0d0b0b" opacity="0.85"/>
+  <path d="M305 450 C 315 520, 360 558, 400 562 C 440 558, 485 520, 495 450" fill="none" stroke="#0d0b0b" stroke-width="5" opacity="0.55"/>
+  <!-- lips -->
+  <path d="M372 512 C 385 505, 415 505, 428 512 C 415 524, 385 524, 372 512 Z" fill="#3a2118"/>
+  <path d="M372 512 L 428 512" stroke="#1d0f09" stroke-width="2"/>
+  <!-- face tattoo: small cross under eye -->
+  <path d="M465 455 l 0 14 M459 460 l 12 0" stroke="#1a0f0a" stroke-width="2.5"/>
+
+  <!-- caption -->
+  <rect x="0" y="0" width="800" height="70" fill="#000" opacity="0.35"/>
+  <text x="32" y="44" font-family="Arial, sans-serif" font-weight="700" font-size="24" fill="#ffffff">Marcus "Ledger" Vaughn</text>
+  <text x="768" y="44" text-anchor="end" font-family="Arial, sans-serif" font-size="16" fill="#b9a6d6">Fictional character · Music manager</text>
+</svg>
